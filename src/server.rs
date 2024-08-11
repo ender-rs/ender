@@ -60,7 +60,7 @@ impl Server {
         }
     }
 
-    pub fn start_loop(&mut self) {
+    pub fn start_loop(&mut self) -> ! {
         let mut events = mio::Events::with_capacity(Self::CONNECTIONS_CAPACITY);
         loop {
             self.try_tick();
