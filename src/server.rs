@@ -105,7 +105,7 @@ impl Server {
             .state
             .decode_server_bound_packet(&mut connection.read_buf)?
         {
-            ServerBoundPacket::HandShakeC2s(HandShakeC2s) => todo!(),
+            ServerBoundPacket::HandShakeC2s(HandShakeC2s{}) => todo!(),
         };
         Ok(())
     }

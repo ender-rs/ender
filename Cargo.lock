@@ -125,6 +125,7 @@ version = "0.1.0"
 dependencies = [
  "arrayvec",
  "fastbuf",
+ "fastvarint",
  "flecs_ecs",
  "mio",
  "packetize",
@@ -150,6 +151,12 @@ checksum = "8762a3b780e05e1254715e597b4502fe067cf10814911d6f4ee83cf6bde28977"
 dependencies = [
  "varuint",
 ]
+
+[[package]]
+name = "fastvarint"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b006233b46fb9f34767166ce4f9c5985684daae013f4a460b8ae90c07d0ca06e"
 
 [[package]]
 name = "flecs_ecs"
@@ -338,12 +345,13 @@ checksum = "3fdb12b2476b595f9358c5161aa467c2438859caa136dec86c26fdd2efe17b92"
 
 [[package]]
 name = "packetize"
-version = "0.62.0"
+version = "0.64.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "80ee9c78090c218de5b4be609d88d61b65caed726da656354e0ebce53d831c24"
+checksum = "f745c2d9e11d21c79f1ae597a720e100890752f39808861dbb7fc3d27c5232f7"
 dependencies = [
  "arrayvec",
  "fastbuf",
+ "fastvarint",
  "integer-encoding",
  "nonmax",
  "packetize_derive",
@@ -352,9 +360,9 @@ dependencies = [
 
 [[package]]
 name = "packetize_derive"
-version = "0.62.0"
+version = "0.64.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b282d3e120a744f67604da835250e3d354291e142ad5f1ebd5be3611c0a9da4d"
+checksum = "d95d3190981a08ed85e460669a8662adaed4598f44ab873632847613d6a8a165"
 dependencies = [
  "proc-macro2",
  "quote",
