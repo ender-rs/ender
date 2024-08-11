@@ -1,0 +1,13 @@
+[package]
+name = "ender"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+arrayvec = "0.7.4"
+fastbuf = "0.14.0"
+flecs_ecs = "0.1.3"
+mio = { version = "1.0.1", features = ["os-poll", "net"] }
+packetize = "0.62.0"
+slab = "0.4.9"
+tick-machine = "0.5.0"
