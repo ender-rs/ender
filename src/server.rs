@@ -5,7 +5,7 @@ use packetize::ServerBoundPacketStream;
 use slab::Slab;
 use tick_machine::{Tick, TickState};
 
-use crate::packets::{ConnectionState, HandShakeC2s, ServerBoundPacket};
+use crate::packets::{HandShakeC2s, Mc1_21_1Packets, ServerBoundPacket};
 
 pub struct Server {
     poll: mio::Poll,
@@ -14,20 +14,22 @@ pub struct Server {
     connections: Slab<Connection>,
 }
 
-pub struct GamePlayer {}
+pub const PACKET_WRITE_BUF: usize = 4096;
 
 pub struct Connection {
-    read_buf: Buffer<123>,
-    state: ConnectionState,
+    read_buf: Box<Buffer<4096>>,
+    write_buf: Box<Buffer<4096>>,
+    state: Mc1_21_1Packets,
     stream: mio::net::TcpStream,
 }
 
 impl Connection {
     pub fn new(stream: mio::net::TcpStream) -> Self {
         Self {
-            read_buf: Buffer::new(),
+            read_buf: Box::new(Buffer::new()),
             stream,
-            state: ConnectionState::default(),
+            state: Mc1_21_1Packets::default(),
+            write_buf: Box::new(Buffer::new()),
         }
     }
 }
@@ -38,7 +40,6 @@ impl Server {
     const LISTENER_KEY: usize = usize::MAX;
     const CONNECTIONS_CAPACITY: usize = 1000;
     const TICK: Duration = Duration::from_millis(50);
-    const ROOM_CAPACITY: usize = 100;
 
     pub fn new() -> Self {
         let poll = mio::Poll::new().unwrap();
@@ -103,9 +104,16 @@ impl Server {
         let connection = unsafe { self.connections.get_unchecked_mut(connection_id as usize) };
         match connection
             .state
-            .decode_server_bound_packet(&mut connection.read_buf)?
+            .decode_server_bound_packet(&mut *connection.read_buf)?
         {
-            ServerBoundPacket::HandShakeC2s(HandShakeC2s{}) => todo!(),
+            ServerBoundPacket::HandShakeC2s(HandShakeC2s {
+                protocol_version,
+                server_address,
+                server_port,
+                next_state,
+            }) => {
+                dbg!(protocol_version, server_address, server_port, next_state);
+            }
         };
         Ok(())
     }
