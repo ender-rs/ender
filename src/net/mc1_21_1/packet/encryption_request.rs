@@ -10,4 +10,5 @@ pub struct EncryptionRequestS2c {
     pub public_key: ArrayVec<u8, 327>,
     pub verity_token_len: VarInt,
     pub verify_token: ArrayVec<u8, 4>,
+    pub should_authenticate: bool,
 }

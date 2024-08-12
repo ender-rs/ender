@@ -4,6 +4,7 @@ use crate::packet_format::MinecraftPacketFormat;
 
 use super::packet::{
     encryption_request::EncryptionRequestS2c,
+    encryption_response::EncryptionResponseC2s,
     handshake::HandShakeC2s,
     login_start::LoginStartC2s,
     ping::{PingRequestC2s, PingResponseS2c},
@@ -21,5 +22,5 @@ pub enum Mc1_21_1ConnectionState {
         PingRequestC2s,
         PingResponseS2c,
     ),
-    Login(LoginStartC2s, EncryptionRequestS2c),
+    Login(LoginStartC2s, EncryptionRequestS2c, EncryptionResponseC2s),
 }

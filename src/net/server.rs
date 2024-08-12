@@ -1,4 +1,4 @@
-use std::{io::Write, time::Duration};
+use std::{collections::HashMap, io::Write, time::Duration};
 
 use fastbuf::{Buffer, ReadBuf, ReadToBuf};
 use packetize::{ClientBoundPacketStream, ServerBoundPacketStream};
@@ -12,7 +12,7 @@ use crate::net::mc1_21_1::packet::{
 };
 
 use super::mc1_21_1::{
-    packet::ping::handle_ping_request,
+    packet::{encryption_response::handle_encryption_response, ping::handle_ping_request},
     packets::{ClientBoundPacket, Mc1_21_1ConnectionState, ServerBoundPacket},
 };
 
@@ -24,6 +24,7 @@ pub struct Server {
     public_key: RsaPublicKey,
     private_key: RsaPrivateKey,
     pub public_key_der: Box<[u8]>,
+    pub verify_tokens: HashMap<ConnectionId, [u8; 4]>,
 }
 
 pub const PACKET_BYTE_BUFFER_LENGTH: usize = 4096;
@@ -83,6 +84,7 @@ impl Server {
             public_key,
             private_key,
             public_key_der,
+            verify_tokens: HashMap::new(),
         }
     }
 
@@ -152,6 +154,9 @@ impl Server {
                 }
                 ServerBoundPacket::PingRequestC2s(ping_request) => {
                     handle_ping_request(self, connection_id, &ping_request)
+                }
+                ServerBoundPacket::EncryptionResponseC2s(encryption_response) => {
+                    handle_encryption_response(self, connection_id, &encryption_response)
                 }
             }?;
         }

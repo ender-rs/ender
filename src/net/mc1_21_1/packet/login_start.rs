@@ -25,6 +25,7 @@ pub fn handle_login_start(
     dbg!(login_start);
 
     let verify_token: [u8; 4] = random();
+    server.verify_tokens.insert(connection_id, verify_token);
     let public_key_der = &server.public_key_der;
 
     let mut public_key = ArrayVec::<u8, 327>::new();
@@ -45,9 +46,11 @@ pub fn handle_login_start(
             public_key,
             verity_token_len: (verify_token.len() as i32).into(),
             verify_token: verify_token.into(),
+            should_authenticate: true,
         }
         .into(),
     )?;
+    server.flush_write_buffer(connection_id);
     dbg!("Success send encrypt request");
     Ok(())
 }
