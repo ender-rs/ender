@@ -1,4 +1,4 @@
-use std::mem::transmute_copy;
+use std::{mem::transmute_copy, ops::Deref};
 
 use fastbuf::ReadBuf;
 use packetize::{Decode, Encode, PacketStreamFormat};
@@ -12,8 +12,19 @@ impl PacketStreamFormat for MinecraftPacketFormat {
     where
         ID: Default,
     {
-        let varint = VarInt::decode(buf)?;
-        Ok(unsafe { transmute_copy(&varint) })
+        if buf.remaining() < u32::MAX as usize / 8 + 1 {
+            Err(())?;
+        }
+        let packet_len = *VarInt::decode(buf)?;
+        if packet_len as usize > buf.remaining() {
+            Err(())?;
+        }
+        let id = VarInt::decode(buf)?;
+        let backup_filled_len = buf.filled_len();
+        unsafe { buf.set_filled_len(buf.pos() as usize + packet_len as usize) };
+        let result = Ok(unsafe { transmute_copy(&id) });
+        unsafe { buf.set_filled_len(backup_filled_len) };
+        result
     }
 
     fn write_packet_with_id<T, P>(
@@ -28,22 +39,5 @@ impl PacketStreamFormat for MinecraftPacketFormat {
         VarInt::from(id as i32).encode(buf)?;
         packet.encode(buf)?;
         Ok(())
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use fastbuf::{Buffer, WriteBuf};
-    use packetize::Decode;
-
-    use crate::var_int::VarInt;
-
-    // [16, 0, 255, 5, 9, 108, 111, 99, 97, 108, 104, 111, 115, 116, 99, 181, 1]
-    #[test]
-    fn test() {
-        let mut buf = Buffer::<1000>::new();
-        buf.write(&[16, 0, 255, 5, 9, 108]);
-        let varint = VarInt::decode(&mut buf);
-        println!("{:?}", varint.unwrap());
     }
 }

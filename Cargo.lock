@@ -148,9 +148,9 @@ dependencies = [
 
 [[package]]
 name = "fastbuf"
-version = "0.16.0"
+version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "49f807581d7fb696bf5bb7dece3aba1a4ce9d5db9f12718f10ceeb95edd16ad7"
+checksum = "467aa05190534153879fea9e015b88efb2975a85c8abacdaa784028b77daaf83"
 dependencies = [
  "varuint",
 ]
@@ -223,9 +223,9 @@ checksum = "610a5acd306ec67f907abe5567859a3c693fb9886eb1f012ab8f2a47bef3db51"
 
 [[package]]
 name = "packetize"
-version = "0.68.0"
+version = "0.70.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d81d3bb372fbfb6fb1e904937b841cdb99cfc96e855ca8cac0ef48e514fa3d80"
+checksum = "d19e56449105639244dbde745e21389954491f464ccdac8c258daefec031f347"
 dependencies = [
  "arrayvec",
  "fastbuf",
@@ -238,9 +238,9 @@ dependencies = [
 
 [[package]]
 name = "packetize_derive"
-version = "0.68.0"
+version = "0.70.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "05e2ffa1d67467503c35c7c6f1013aeb8da3b94c5e973a91ddbf0bafe2bd35ab"
+checksum = "e8a35d823e1035f1f51d57e383cd74bf12857e0484bfd99540859ab606f6ec9c"
 dependencies = [
  "proc-macro2",
  "quote",

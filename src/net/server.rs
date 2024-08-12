@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use fastbuf::{Buffer, ReadBuf, ReadToBuf, WriteBuf};
+use fastbuf::{Buf, Buffer, ReadBuf, ReadToBuf, WriteBuf};
 use packetize::{Decode, ServerBoundPacketStream};
 use slab::Slab;
 use tick_machine::{Tick, TickState};
@@ -108,18 +108,7 @@ impl Server {
     fn on_read_packet(&mut self, connection_id: ConnectionId) -> Result<(), ()> {
         let connection = unsafe { self.connections.get_unchecked_mut(connection_id as usize) };
         let buf = &mut *connection.read_buf;
-        println!("{:?}", buf.remaining());
         while buf.remaining() != 0 {
-            dbg!(buf.pos());
-            dbg!(buf.remaining());
-            dbg!(buf.filled_len());
-            let packet_len: i32 = VarInt::decode(buf)?.into();
-            if packet_len as usize > buf.remaining() {
-                Err(())?;
-            }
-            let backup_filled_len = buf.filled_len();
-            unsafe { buf.set_filled_len(buf.pos() + packet_len as usize) };
-            println!("HIHIHI");
             match connection.state.decode_server_bound_packet(buf)? {
                 ServerBoundPacket::HandShakeC2s(HandShakeC2s {
                     protocol_version,
@@ -130,7 +119,6 @@ impl Server {
                     dbg!(protocol_version, server_address, server_port, next_state);
                 }
             };
-            unsafe { buf.set_filled_len(backup_filled_len) };
         }
         Ok(())
     }

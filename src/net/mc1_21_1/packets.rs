@@ -1,4 +1,4 @@
-use packetize::{streaming_packets, Decode, Encode, PacketStreamFormat};
+use packetize::streaming_packets;
 
 use crate::packet_format::MinecraftPacketFormat;
 

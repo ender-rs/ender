@@ -6,11 +6,11 @@ edition = "2021"
 [dependencies]
 arrayvec = "0.7.4"
 derive_more = { version = "1.0.0", features = ["full"] }
-fastbuf = "0.16.0"
+fastbuf = "0.17.0"
 fastvarint = "0.2.0"
 mio = { version = "1.0.1", features = ["os-poll", "net"] }
 nonmax = "0.5.5"
-packetize = "0.68.0"
+packetize = "0.70.0"
 slab = "0.4.9"
 tick-machine = "0.5.0"
 
