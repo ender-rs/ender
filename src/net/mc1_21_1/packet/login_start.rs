@@ -1,3 +1,4 @@
+use arrayvec::ArrayVec;
 use packetize::{Decode, Encode};
 use rand::random;
 use uuid::Uuid;
@@ -8,7 +9,6 @@ use crate::{
         server::{ConnectionId, Server},
     },
     var_string::VarString,
-    varint_sized_array::VarIntSizedArray,
 };
 
 #[derive(Debug, Encode, Decode)]
@@ -30,7 +30,7 @@ pub fn handle_login_start(
 
     dbg!(public_key_der.len());
 
-    let mut public_key = VarIntSizedArray::<u8, 293>::new();
+    let mut public_key = ArrayVec::<u8, 293>::new();
     unsafe {
         std::ptr::copy_nonoverlapping(
             public_key_der.as_ptr(),
@@ -40,7 +40,7 @@ pub fn handle_login_start(
         public_key.set_len(public_key_der.len());
     }
 
-    let mut verify_token_array = VarIntSizedArray::<u8, 4>::new();
+    let mut verify_token_array = ArrayVec::<u8, 4>::new();
     unsafe {
         std::ptr::copy_nonoverlapping(
             verify_token.as_ptr(),

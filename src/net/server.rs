@@ -194,7 +194,7 @@ impl Server {
         dbg!("Generating RSA key pair");
         let mut rng = thread_rng();
 
-        let priv_key = RsaPrivateKey::new(&mut rng, 2048).unwrap();
+        let priv_key = RsaPrivateKey::new(&mut rng, 1024).unwrap();
         let pub_key = RsaPublicKey::from(&priv_key);
         (pub_key, priv_key)
     }

@@ -9,10 +9,8 @@ use crate::{
 
 #[derive(Debug, Encode, Decode)]
 pub struct EncryptionResponseC2s {
-    pub shared_secret_len: VarInt,
-    pub shared_secret: ArrayVec<u8, 20>,
-    pub verify_token_len: VarInt,
-    pub verify_token: ArrayVec<u8, 4>,
+    pub shared_secret: ArrayVec<u8, 128>,
+    pub verify_token: ArrayVec<u8, 128>,
 }
 
 pub fn handle_encryption_response(
@@ -20,7 +18,8 @@ pub fn handle_encryption_response(
     connection_id: ConnectionId,
     encryption_response: &EncryptionResponseC2s,
 ) -> Result<(), ()> {
-    dbg!(encryption_response);
+    #[cfg(debug_assertions)]
+    println!("{encryption_response:?}");
 
     // let verify_token = server.verify_tokens.get(&connection_id).ok_or(())?;
 
