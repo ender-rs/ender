@@ -3,3 +3,4 @@ pub mod packet_format;
 pub mod var_int;
 pub mod var_string;
 pub mod player_name;
+pub mod varint_sized_array;
