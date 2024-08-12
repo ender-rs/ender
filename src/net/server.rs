@@ -1,11 +1,16 @@
 use std::time::Duration;
 
-use fastbuf::{Buffer, ReadToBuf};
-use packetize::ServerBoundPacketStream;
+use fastbuf::{Buffer, ReadBuf, ReadToBuf, WriteBuf};
+use packetize::{Decode, ServerBoundPacketStream};
 use slab::Slab;
 use tick_machine::{Tick, TickState};
 
-use crate::packets::{HandShakeC2s, Mc1_21_1Packets, ServerBoundPacket};
+use crate::var_int::VarInt;
+
+use super::mc1_21_1::{
+    packet::handshake::HandShakeC2s,
+    packets::{Mc1_21_1Packets, ServerBoundPacket},
+};
 
 pub struct Server {
     poll: mio::Poll,
@@ -14,10 +19,10 @@ pub struct Server {
     connections: Slab<Connection>,
 }
 
-pub const PACKET_WRITE_BUF: usize = 4096;
+pub const PACKET_READ_BUFFER_LENGTH: usize = 4096;
 
 pub struct Connection {
-    read_buf: Box<Buffer<4096>>,
+    read_buf: Box<Buffer<PACKET_READ_BUFFER_LENGTH>>,
     write_buf: Box<Buffer<4096>>,
     state: Mc1_21_1Packets,
     stream: mio::net::TcpStream,
@@ -102,19 +107,31 @@ impl Server {
 
     fn on_read_packet(&mut self, connection_id: ConnectionId) -> Result<(), ()> {
         let connection = unsafe { self.connections.get_unchecked_mut(connection_id as usize) };
-        match connection
-            .state
-            .decode_server_bound_packet(&mut *connection.read_buf)?
-        {
-            ServerBoundPacket::HandShakeC2s(HandShakeC2s {
-                protocol_version,
-                server_address,
-                server_port,
-                next_state,
-            }) => {
-                dbg!(protocol_version, server_address, server_port, next_state);
+        let buf = &mut *connection.read_buf;
+        println!("{:?}", buf.remaining());
+        while buf.remaining() != 0 {
+            dbg!(buf.pos());
+            dbg!(buf.remaining());
+            dbg!(buf.filled_len());
+            let packet_len: i32 = VarInt::decode(buf)?.into();
+            if packet_len as usize > buf.remaining() {
+                Err(())?;
             }
-        };
+            let backup_filled_len = buf.filled_len();
+            unsafe { buf.set_filled_len(buf.pos() + packet_len as usize) };
+            println!("HIHIHI");
+            match connection.state.decode_server_bound_packet(buf)? {
+                ServerBoundPacket::HandShakeC2s(HandShakeC2s {
+                    protocol_version,
+                    server_address,
+                    server_port,
+                    next_state,
+                }) => {
+                    dbg!(protocol_version, server_address, server_port, next_state);
+                }
+            };
+            unsafe { buf.set_filled_len(backup_filled_len) };
+        }
         Ok(())
     }
 
