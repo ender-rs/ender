@@ -25,8 +25,8 @@ pub enum Mc1_21_1ConnectionState {
     ),
     Login(
         LoginStartC2s,
-        LoginDisconnectS2c,
-        EncryptionRequestS2c,
+        #[id(0)] LoginDisconnectS2c,
+        #[id(1)] EncryptionRequestS2c,
         EncryptionResponseC2s,
     ),
 }
