@@ -1,0 +1,6 @@
+sandbox               fastest       │ slowest       │ median        │ mean          │ samples │ iters
+├─ generate_key_fair  [src/net/server.rs:189:9] "Generating RSA key pair" = "Generating RSA key pair"
+12.66 ms      │ 12.66 ms      │ 12.66 ms      │ 12.66 ms      │ 1       │ 1
+╰─ thread_join        [src/net/server.rs:189:9] "Generating RSA key pair" = "Generating RSA key pair"
+19.14 ms      │ 19.14 ms      │ 19.14 ms      │ 19.14 ms      │ 1       │ 1
+
