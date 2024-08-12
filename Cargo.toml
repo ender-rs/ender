@@ -10,7 +10,7 @@ fastbuf = "0.20.0"
 fastvarint = "0.3.0"
 mio = { version = "1.0.1", features = ["os-poll", "net"] }
 nonmax = { version = "0.5.5", features = ["serde"] }
-packetize = "0.77.0"
+packetize = "0.78.0"
 rand = "0.8.5"
 rsa = "0.9.6"
 rsa-der = "0.3.0"
