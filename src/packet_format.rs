@@ -12,17 +12,20 @@ impl PacketStreamFormat for MinecraftPacketFormat {
     where
         ID: Default,
     {
-        if buf.remaining() < u32::MAX as usize / 8 + 1 {
+        if buf.remaining() < u32::BITS as usize / 8 + 1 {
             Err(())?;
         }
         let packet_len = *VarInt::decode(buf)?;
-        if packet_len as usize > buf.remaining() {
+        if buf.remaining() < packet_len as usize {
             Err(())?;
         }
-        let id = VarInt::decode(buf)?;
+        let id = *VarInt::decode(buf)?;
         let backup_filled_len = buf.filled_len();
         unsafe { buf.set_filled_len(buf.pos() as usize + packet_len as usize) };
         let result = Ok(unsafe { transmute_copy(&id) });
+        if result.is_err() {
+            println!("packet id {id:#03x} not found");
+        }
         unsafe { buf.set_filled_len(backup_filled_len) };
         result
     }
