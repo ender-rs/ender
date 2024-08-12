@@ -76,10 +76,14 @@ impl Encode for VarInt {
 
 impl Decode for VarInt {
     fn decode(buf: &mut impl ReadBuf) -> Result<Self, ()> {
-        let buffer = buf.get_continuous(i32::MAX as usize / 8 + 1);
+        let bytes = buf.get_continuous(u32::BITS as usize / 8 + 1);
+        let remaining = buf.remaining();
         let mut val = 0;
         for i in 0..5 {
-            let byte = *unsafe { buffer.get_unchecked(i) };
+            if remaining < i + 1 {
+                Err(())?
+            }
+            let byte = *unsafe { bytes.get_unchecked(i) };
             val |= (byte as i32 & 0b01111111) << (i * 7);
             if byte & 0b10000000 == 0 {
                 buf.advance(i + 1);

@@ -12,12 +12,11 @@ impl PacketStreamFormat for MinecraftPacketFormat {
     where
         ID: Default,
     {
-        if buf.remaining() < u32::BITS as usize / 8 + 1 {
-            Err(())?;
-        }
         let packet_len = *VarInt::decode(buf)?;
+        dbg!(packet_len);
+        dbg!(buf.remaining());
         if buf.remaining() < packet_len as usize {
-            Err(())?;
+            Err(())?
         }
         let id = *VarInt::decode(buf)?;
         let backup_filled_len = buf.filled_len();

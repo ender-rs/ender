@@ -1,16 +1,15 @@
 use std::time::Duration;
 
-use fastbuf::{Buf, Buffer, ReadBuf, ReadToBuf, WriteBuf};
-use packetize::{Decode, ServerBoundPacketStream};
+use fastbuf::{Buffer, ReadBuf, ReadToBuf};
+use packetize::ServerBoundPacketStream;
 use slab::Slab;
 use tick_machine::{Tick, TickState};
 
-use crate::var_int::VarInt;
-
-use super::mc1_21_1::{
-    packet::handshake::HandShakeC2s,
-    packets::{Mc1_21_1Packets, ServerBoundPacket},
+use crate::net::mc1_21_1::packet::{
+    handshake::handle_handshake, login_start::handle_login_start, status::handle_status_request,
 };
+
+use super::mc1_21_1::packets::{Mc1_21_1ConnectionState, ServerBoundPacket};
 
 pub struct Server {
     poll: mio::Poll,
@@ -22,10 +21,10 @@ pub struct Server {
 pub const PACKET_READ_BUFFER_LENGTH: usize = 4096;
 
 pub struct Connection {
-    read_buf: Box<Buffer<PACKET_READ_BUFFER_LENGTH>>,
-    write_buf: Box<Buffer<4096>>,
-    state: Mc1_21_1Packets,
-    stream: mio::net::TcpStream,
+    pub read_buf: Box<Buffer<PACKET_READ_BUFFER_LENGTH>>,
+    pub write_buf: Box<Buffer<4096>>,
+    pub state: Mc1_21_1ConnectionState,
+    pub stream: mio::net::TcpStream,
 }
 
 impl Connection {
@@ -33,7 +32,7 @@ impl Connection {
         Self {
             read_buf: Box::new(Buffer::new()),
             stream,
-            state: Mc1_21_1Packets::default(),
+            state: Mc1_21_1ConnectionState::default(),
             write_buf: Box::new(Buffer::new()),
         }
     }
@@ -66,6 +65,11 @@ impl Server {
         }
     }
 
+    pub fn get_connection(&mut self, connection_id: ConnectionId) -> &mut Connection {
+        // SAFETY: connection_id must valid id
+        unsafe { self.connections.get_unchecked_mut(connection_id as usize) }
+    }
+
     pub fn start_loop(&mut self) -> ! {
         let mut events = mio::Events::with_capacity(Self::CONNECTIONS_CAPACITY);
         loop {
@@ -82,14 +86,13 @@ impl Server {
             let (stream, _addr) = self.listener.accept().unwrap();
             let key = self.connections.insert(Connection::new(stream));
             let connection = unsafe { self.connections.get_unchecked_mut(key) };
-            self.poll
-                .registry()
-                .register(
-                    &mut connection.stream,
-                    mio::Token(key),
-                    mio::Interest::READABLE,
-                )
-                .unwrap();
+            mio::Registry::register(
+                &self.poll.registry(),
+                &mut connection.stream,
+                mio::Token(key),
+                mio::Interest::READABLE,
+            )
+            .unwrap();
         } else {
             match self.on_connection_read(selection_key) {
                 Ok(()) => {}
@@ -106,18 +109,21 @@ impl Server {
     }
 
     fn on_read_packet(&mut self, connection_id: ConnectionId) -> Result<(), ()> {
-        let connection = unsafe { self.connections.get_unchecked_mut(connection_id as usize) };
-        let buf = &mut *connection.read_buf;
-        while buf.remaining() != 0 {
+        while self.get_connection(connection_id).read_buf.remaining() != 0 {
+            let connection = unsafe { self.connections.get_unchecked_mut(connection_id as usize) };
+            let buf = &mut *connection.read_buf;
+            println!("{:?}", buf);
             match connection.state.decode_server_bound_packet(buf)? {
-                ServerBoundPacket::HandShakeC2s(HandShakeC2s {
-                    protocol_version,
-                    server_address,
-                    server_port,
-                    next_state,
-                }) => {
-                    dbg!(protocol_version, server_address, server_port, next_state);
+                ServerBoundPacket::HandShakeC2s(handshake) => {
+                    handle_handshake(self, connection_id, &handshake)
                 }
+                ServerBoundPacket::LoginStartC2s(login_start) => {
+                    handle_login_start(self, connection_id, &login_start)
+                }
+                ServerBoundPacket::StatusRequestC2s(status_request) => {
+                    handle_status_request(self, connection_id, &status_request)
+                }
+                ServerBoundPacket::PingRequestC2s(_) => {}
             };
         }
         Ok(())

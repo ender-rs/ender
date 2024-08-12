@@ -4,9 +4,16 @@ use arrayvec::ArrayString;
 use fastbuf::{ReadBuf, WriteBuf};
 use packetize::{Decode, Encode};
 
-use crate::{net::protocol_version::ProtocolVersion, var_int::VarInt};
+use crate::{
+    net::{
+        mc1_21_1::packets::Mc1_21_1ConnectionState,
+        protocol_version::ProtocolVersion,
+        server::{ConnectionId, Server},
+    },
+    var_int::VarInt,
+};
 
-#[derive(Encode, Decode)]
+#[derive(Debug, Encode, Decode)]
 pub struct HandShakeC2s {
     pub protocol_version: ProtocolVersion,
     pub server_address: ArrayString<1000>,
@@ -33,4 +40,18 @@ impl Decode for NextState {
     fn decode(buf: &mut impl ReadBuf) -> Result<Self, ()> {
         Ok(unsafe { transmute_copy(&VarInt::decode(buf)?) })
     }
+}
+
+pub fn handle_handshake(
+    server: &mut Server,
+    connection_id: ConnectionId,
+    handshake: &HandShakeC2s,
+) {
+    let connection = server.get_connection(connection_id);
+    connection.state = match handshake.next_state {
+        NextState::Status => Mc1_21_1ConnectionState::Status,
+        NextState::Login => Mc1_21_1ConnectionState::Login,
+        NextState::Transfer => todo!(),
+    };
+    dbg!(handshake);
 }
