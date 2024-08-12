@@ -11,6 +11,8 @@ fastvarint = "0.2.0"
 mio = { version = "1.0.1", features = ["os-poll", "net"] }
 nonmax = { version = "0.5.5", features = ["serde"] }
 packetize = "0.73.0"
+rand = "0.8.5"
+rsa = "0.9.6"
 serde = { version = "1.0.206", features = ["derive"] }
 simd-json = "0.13.10"
 slab = "0.4.9"

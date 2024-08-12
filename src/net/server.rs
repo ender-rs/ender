@@ -2,6 +2,8 @@ use std::{io::Write, time::Duration};
 
 use fastbuf::{Buffer, ReadBuf, ReadToBuf};
 use packetize::{ClientBoundPacketStream, ServerBoundPacketStream};
+use rand::thread_rng;
+use rsa::{RsaPrivateKey, RsaPublicKey};
 use slab::Slab;
 use tick_machine::{Tick, TickState};
 
@@ -165,6 +167,14 @@ impl Server {
         mio::Registry::deregister(&self.poll.registry(), &mut connection.stream).unwrap();
         let _result = connection.stream.shutdown(std::net::Shutdown::Both);
         self.connections.remove(connection_id);
+    }
+
+    fn generate_key_fair() -> (RsaPublicKey, RsaPrivateKey) {
+        let mut rng = thread_rng();
+
+        let priv_key = RsaPrivateKey::new(&mut rng, 4096).unwrap();
+        let pub_key = RsaPublicKey::from(&priv_key);
+        (pub_key, priv_key)
     }
 }
 
