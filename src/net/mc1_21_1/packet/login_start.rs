@@ -54,9 +54,7 @@ pub fn handle_login_start(
         connection_id,
         &EncryptionRequestS2c {
             server_id: VarString::from_str("").unwrap(),
-            public_key_len: (public_key.len() as i32).into(),
             public_key,
-            verity_token_len: (verify_token_array.len() as i32).into(),
             verify_token: verify_token_array,
             should_authenticate: true,
         }
