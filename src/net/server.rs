@@ -3,7 +3,7 @@ use std::{io::Write, time::Duration};
 use fastbuf::{Buffer, ReadBuf, ReadToBuf};
 use packetize::{ClientBoundPacketStream, ServerBoundPacketStream};
 use rand::thread_rng;
-use rsa::{RsaPrivateKey, RsaPublicKey};
+use rsa::{traits::PublicKeyParts, RsaPrivateKey, RsaPublicKey};
 use slab::Slab;
 use tick_machine::{Tick, TickState};
 
@@ -21,6 +21,9 @@ pub struct Server {
     listener: mio::net::TcpListener,
     tick_state: TickState,
     connections: Slab<Connection>,
+    public_key: RsaPublicKey,
+    private_key: RsaPrivateKey,
+    pub public_key_der: Box<[u8]>,
 }
 
 pub const PACKET_BYTE_BUFFER_LENGTH: usize = 4096;
@@ -51,6 +54,16 @@ impl Server {
     const TICK: Duration = Duration::from_millis(50);
 
     pub fn new() -> Self {
+        let (public_key, private_key) = Self::generate_key_fair();
+
+        dbg!("keys generated");
+
+        let public_key_der = rsa_der::public_key_to_der(
+            &private_key.n().to_bytes_be(),
+            &private_key.e().to_bytes_be(),
+        )
+        .into_boxed_slice();
+
         let poll = mio::Poll::new().unwrap();
         let addr = "[::]:25525".parse().unwrap();
         let mut listener = mio::net::TcpListener::bind(addr).unwrap();
@@ -67,6 +80,9 @@ impl Server {
             tick_state: TickState::new(Self::TICK),
             listener,
             connections: Slab::with_capacity(Self::CONNECTIONS_CAPACITY),
+            public_key,
+            private_key,
+            public_key_der,
         }
     }
 
@@ -170,9 +186,10 @@ impl Server {
     }
 
     fn generate_key_fair() -> (RsaPublicKey, RsaPrivateKey) {
+        dbg!("Generating RSA key pair");
         let mut rng = thread_rng();
 
-        let priv_key = RsaPrivateKey::new(&mut rng, 4096).unwrap();
+        let priv_key = RsaPrivateKey::new(&mut rng, 2048).unwrap();
         let pub_key = RsaPublicKey::from(&priv_key);
         (pub_key, priv_key)
     }
