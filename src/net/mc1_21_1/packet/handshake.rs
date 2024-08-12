@@ -46,7 +46,7 @@ pub fn handle_handshake(
     server: &mut Server,
     connection_id: ConnectionId,
     handshake: &HandShakeC2s,
-) {
+) -> Result<(), ()> {
     let connection = server.get_connection(connection_id);
     connection.state = match handshake.next_state {
         NextState::Status => Mc1_21_1ConnectionState::Status,
@@ -54,4 +54,5 @@ pub fn handle_handshake(
         NextState::Transfer => todo!(),
     };
     dbg!(handshake);
+    Ok(())
 }

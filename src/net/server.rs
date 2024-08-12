@@ -1,7 +1,7 @@
-use std::time::Duration;
+use std::{io::Write, time::Duration};
 
 use fastbuf::{Buffer, ReadBuf, ReadToBuf};
-use packetize::ServerBoundPacketStream;
+use packetize::{ClientBoundPacketStream, ServerBoundPacketStream};
 use slab::Slab;
 use tick_machine::{Tick, TickState};
 
@@ -9,7 +9,10 @@ use crate::net::mc1_21_1::packet::{
     handshake::handle_handshake, login_start::handle_login_start, status::handle_status_request,
 };
 
-use super::mc1_21_1::packets::{Mc1_21_1ConnectionState, ServerBoundPacket};
+use super::mc1_21_1::{
+    packet::ping::handle_ping_request,
+    packets::{ClientBoundPacket, Mc1_21_1ConnectionState, ServerBoundPacket},
+};
 
 pub struct Server {
     poll: mio::Poll,
@@ -18,10 +21,10 @@ pub struct Server {
     connections: Slab<Connection>,
 }
 
-pub const PACKET_READ_BUFFER_LENGTH: usize = 4096;
+pub const PACKET_BYTE_BUFFER_LENGTH: usize = 4096;
 
 pub struct Connection {
-    pub read_buf: Box<Buffer<PACKET_READ_BUFFER_LENGTH>>,
+    pub read_buf: Box<Buffer<PACKET_BYTE_BUFFER_LENGTH>>,
     pub write_buf: Box<Buffer<4096>>,
     pub state: Mc1_21_1ConnectionState,
     pub stream: mio::net::TcpStream,
@@ -66,8 +69,15 @@ impl Server {
     }
 
     pub fn get_connection(&mut self, connection_id: ConnectionId) -> &mut Connection {
-        // SAFETY: connection_id must valid id
+        // SAFETY: connection id must valid
         unsafe { self.connections.get_unchecked_mut(connection_id as usize) }
+    }
+
+    pub unsafe fn try_get_connection(
+        &mut self,
+        connection_id: ConnectionId,
+    ) -> Option<&mut Connection> {
+        self.connections.get_mut(connection_id as usize)
     }
 
     pub fn start_loop(&mut self) -> ! {
@@ -112,7 +122,6 @@ impl Server {
         while self.get_connection(connection_id).read_buf.remaining() != 0 {
             let connection = unsafe { self.connections.get_unchecked_mut(connection_id as usize) };
             let buf = &mut *connection.read_buf;
-            println!("{:?}", buf);
             match connection.state.decode_server_bound_packet(buf)? {
                 ServerBoundPacket::HandShakeC2s(handshake) => {
                     handle_handshake(self, connection_id, &handshake)
@@ -123,10 +132,32 @@ impl Server {
                 ServerBoundPacket::StatusRequestC2s(status_request) => {
                     handle_status_request(self, connection_id, &status_request)
                 }
-                ServerBoundPacket::PingRequestC2s(_) => {}
-            };
+                ServerBoundPacket::PingRequestC2s(ping_request) => {
+                    handle_ping_request(self, connection_id, &ping_request)
+                }
+            }?;
         }
         Ok(())
+    }
+
+    pub fn send_packet(
+        &mut self,
+        connection_id: ConnectionId,
+        packet: &ClientBoundPacket,
+    ) -> Result<(), ()> {
+        let connection = self.get_connection(connection_id);
+        let buf = &mut *connection.write_buf;
+        connection.state.encode_client_bound_packet(packet, buf)?;
+        Ok(())
+    }
+
+    pub fn flush_write_buffer(&mut self, connection_id: ConnectionId) {
+        let connection = self.get_connection(connection_id);
+        let buf = &mut *connection.write_buf;
+        match connection.stream.write_all(buf.read(buf.remaining())) {
+            Ok(()) => {}
+            Err(_) => self.close_connection(connection_id),
+        };
     }
 
     fn close_connection(&mut self, connection_id: ConnectionId) {

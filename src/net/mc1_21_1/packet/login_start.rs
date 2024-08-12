@@ -16,6 +16,7 @@ pub fn handle_login_start(
     server: &mut Server,
     connection_id: ConnectionId,
     login_start: &LoginStartC2s,
-) {
+) -> Result<(), ()>{
     dbg!(login_start);
+    Ok(())
 }

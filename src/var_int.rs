@@ -1,6 +1,7 @@
 use fastbuf::{ReadBuf, WriteBuf};
 use nonmax::NonMaxI32;
 use packetize::{Decode, Encode};
+use serde::{Deserialize, Serialize};
 
 #[derive(
     Default,
@@ -16,6 +17,8 @@ use packetize::{Decode, Encode};
     Eq,
     PartialOrd,
     Ord,
+    Serialize,
+    Deserialize,
 )]
 pub struct VarInt(i32);
 
@@ -33,6 +36,8 @@ pub struct VarInt(i32);
     Eq,
     PartialOrd,
     Ord,
+    Serialize,
+    Deserialize,
 )]
 pub struct NonMaxVarInt(NonMaxI32);
 

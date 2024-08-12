@@ -1,11 +1,24 @@
-use arrayvec::ArrayString;
+use std::str::FromStr;
+
+use arrayvec::{ArrayString, CapacityError};
 use fastbuf::{ReadBuf, WriteBuf};
 use packetize::{Decode, Encode};
+use serde::{Deserialize, Serialize};
 
 use crate::var_int::VarInt;
 
-#[derive(Debug, derive_more::DerefMut, derive_more::Deref)]
-pub struct VarString<const N: usize>(ArrayString<N>);
+#[derive(Debug, derive_more::DerefMut, derive_more::Deref, Serialize, Deserialize)]
+pub struct VarString<const N: usize>(pub ArrayString<N>);
+
+impl<const N: usize> VarString<N> {
+    pub fn new() -> Self {
+        Self(ArrayString::new())
+    }
+
+    pub fn from_str(s: &'static str) -> Result<Self, CapacityError> {
+        Ok(Self(ArrayString::from_str(s)?))
+    }
+}
 
 impl<const N: usize> Encode for VarString<N> {
     fn encode(&self, buf: &mut impl WriteBuf) -> Result<(), ()> {

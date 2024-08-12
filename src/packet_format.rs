@@ -1,9 +1,9 @@
-use std::{mem::transmute_copy, ops::Deref};
+use std::mem::transmute_copy;
 
-use fastbuf::ReadBuf;
+use fastbuf::{Buf, Buffer, ReadBuf};
 use packetize::{Decode, Encode, PacketStreamFormat};
 
-use crate::var_int::VarInt;
+use crate::{net::server::PACKET_BYTE_BUFFER_LENGTH, var_int::VarInt};
 
 pub struct MinecraftPacketFormat;
 
@@ -13,19 +13,17 @@ impl PacketStreamFormat for MinecraftPacketFormat {
         ID: Default,
     {
         let packet_len = *VarInt::decode(buf)?;
-        dbg!(packet_len);
-        dbg!(buf.remaining());
         if buf.remaining() < packet_len as usize {
             Err(())?
         }
         let id = *VarInt::decode(buf)?;
-        let backup_filled_len = buf.filled_len();
-        unsafe { buf.set_filled_len(buf.pos() as usize + packet_len as usize) };
+        let backup_filled_len = buf.filled_pos();
+        unsafe { buf.set_filled_pos(buf.pos() as usize + packet_len as usize) };
         let result = Ok(unsafe { transmute_copy(&id) });
         if result.is_err() {
             println!("packet id {id:#03x} not found");
         }
-        unsafe { buf.set_filled_len(backup_filled_len) };
+        unsafe { buf.set_filled_pos(backup_filled_len) };
         result
     }
 
@@ -37,9 +35,12 @@ impl PacketStreamFormat for MinecraftPacketFormat {
     where
         P: packetize::Packet<T> + Encode,
     {
+        let mut buffer = Buffer::<PACKET_BYTE_BUFFER_LENGTH>::new();
         let id = P::id(state).ok_or(())?;
-        VarInt::from(id as i32).encode(buf)?;
-        packet.encode(buf)?;
+        VarInt::from(id as i32).encode(&mut buffer)?;
+        packet.encode(&mut buffer)?;
+        VarInt::from((buffer.filled_pos() - buffer.pos()) as i32).encode(buf)?;
+        buf.try_write(buffer.read(buffer.remaining()))?;
         Ok(())
     }
 }

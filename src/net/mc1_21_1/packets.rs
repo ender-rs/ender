@@ -5,7 +5,7 @@ use crate::packet_format::MinecraftPacketFormat;
 use super::packet::{
     handshake::HandShakeC2s,
     login_start::LoginStartC2s,
-    ping::PingRequestC2s,
+    ping::{PingRequestC2s, PingResponseS2c},
     status::{StatusRequestC2s, StatusResponseS2c},
 };
 
@@ -14,6 +14,6 @@ use super::packet::{
 pub enum Mc1_21_1ConnectionState {
     #[default]
     HandShake(HandShakeC2s),
-    Status(StatusRequestC2s, StatusResponseS2c, PingRequestC2s),
+    Status(StatusRequestC2s, StatusResponseS2c, PingRequestC2s, PingResponseS2c),
     Login(LoginStartC2s),
 }
