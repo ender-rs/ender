@@ -16,9 +16,15 @@ simd-json = "0.13.10"
 slab = "0.4.9"
 tick-machine = "0.5.0"
 uuid = { version = "1.10.0", features = ["serde"] }
+
 [dev-dependencies]
 divan = "0.1.14"
 
 [[bench]]
 name = "sandbox"
 harness = false
+
+[profile.release]
+strip = true
+lto = true
+codegen-units = 1
