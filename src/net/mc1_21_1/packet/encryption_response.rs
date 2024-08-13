@@ -3,7 +3,11 @@ use packetize::{Decode, Encode};
 use rsa::Pkcs1v15Encrypt;
 
 use crate::{
-    net::server::{ConnectionId, Server},
+    net::{
+        mc1_21_1::packet::login_success::LoginSuccessS2c,
+        server::{ConnectionId, Server},
+    },
+    player_name,
     var_int::VarInt,
     var_string::VarString,
 };
@@ -39,5 +43,25 @@ pub fn handle_encryption_response(
 
     server.verify_tokens.remove(&connection_id);
 
+    send_login_success_packet(server, connection_id)?;
+
+    Ok(())
+}
+
+fn send_login_success_packet(server: &mut Server, connection_id: ConnectionId) -> Result<(), ()> {
+    let connection = server.get_connection(connection_id);
+    let uuid = connection.uuid;
+    let username = connection.player_name.clone();
+    server.send_packet(
+        connection_id,
+        &LoginSuccessS2c {
+            uuid,
+            username,
+            properties: Vec::new(),
+            strict_error_handling: false,
+        }
+        .into(),
+    )?;
+    server.flush_write_buffer(connection_id);
     Ok(())
 }

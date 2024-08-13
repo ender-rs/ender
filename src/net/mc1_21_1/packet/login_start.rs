@@ -7,13 +7,12 @@ use crate::{
     net::{
         mc1_21_1::packet::encryption_request::EncryptionRequestS2c,
         server::{ConnectionId, Server},
-    },
-    var_string::VarString,
+    }, player_name::PlayerName, var_string::VarString
 };
 
 #[derive(Debug, Encode, Decode)]
 pub struct LoginStartC2s {
-    name: VarString<16>,
+    name: PlayerName,
     uuid: Uuid,
 }
 
@@ -61,6 +60,10 @@ pub fn handle_login_start(
         .into(),
     )?;
     server.flush_write_buffer(connection_id);
+
     dbg!("Success send encrypt request");
+    let connection = server.get_connection(connection_id);
+    connection.uuid = login_start.uuid;
+    connection.player_name = login_start.name.clone();
     Ok(())
 }
