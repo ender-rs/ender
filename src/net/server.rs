@@ -1,6 +1,7 @@
 use std::{collections::HashMap, io::Write, time::Duration};
 
 use fastbuf::{Buffer, ReadBuf, ReadToBuf};
+use fxhash::{FxBuildHasher, FxHashMap, FxHashSet, FxHasher};
 use packetize::{ClientBoundPacketStream, ServerBoundPacketStream};
 use rand::thread_rng;
 use rsa::{traits::PublicKeyParts, RsaPrivateKey, RsaPublicKey};
@@ -24,7 +25,7 @@ pub struct Server {
     public_key: RsaPublicKey,
     pub private_key: RsaPrivateKey,
     pub public_key_der: Box<[u8]>,
-    pub verify_tokens: HashMap<ConnectionId, [u8; 4]>,
+    pub verify_tokens: HashMap<ConnectionId, [u8; 4], FxBuildHasher>,
 }
 
 pub const PACKET_BYTE_BUFFER_LENGTH: usize = 4096;
@@ -76,6 +77,8 @@ impl Server {
             mio::Interest::READABLE,
         )
         .unwrap();
+        let verify_tokens =
+            HashMap::with_capacity_and_hasher(Self::CONNECTIONS_CAPACITY, FxBuildHasher::new());
         Self {
             poll,
             tick_state: TickState::new(Self::TICK),
@@ -84,7 +87,7 @@ impl Server {
             public_key,
             private_key,
             public_key_der,
-            verify_tokens: HashMap::new(),
+            verify_tokens,
         }
     }
 
