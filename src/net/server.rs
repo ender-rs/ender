@@ -52,8 +52,6 @@ pub struct Connection {
     pub write_buf: Box<Buffer<4096>>,
     pub state: Mc1_21_1ConnectionState,
     pub stream: mio::net::TcpStream,
-    pub cipher: Encryptor<aes::Aes128>,
-    pub encrypt_key: Vec<u8>,
 }
 
 impl Connection {
