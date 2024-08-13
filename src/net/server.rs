@@ -22,7 +22,7 @@ pub struct Server {
     tick_state: TickState,
     connections: Slab<Connection>,
     public_key: RsaPublicKey,
-    private_key: RsaPrivateKey,
+    pub private_key: RsaPrivateKey,
     pub public_key_der: Box<[u8]>,
     pub verify_tokens: HashMap<ConnectionId, [u8; 4]>,
 }
