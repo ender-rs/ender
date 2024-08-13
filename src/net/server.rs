@@ -12,13 +12,21 @@ use rsa::{
 };
 use slab::Slab;
 use tick_machine::{Tick, TickState};
+use uuid::Uuid;
 
-use crate::net::mc1_21_1::packet::{
-    handshake::handle_handshake, login_start::handle_login_start, status::handle_status_request,
+use crate::{
+    net::mc1_21_1::packet::{
+        handshake::handle_handshake, login_start::handle_login_start, status::handle_status_request,
+    },
+    player_name::PlayerName,
+    var_string::VarString,
 };
 
 use super::mc1_21_1::{
-    packet::{encryption_response::handle_encryption_response, ping::handle_ping_request},
+    packet::{
+        encryption_response::handle_encryption_response, login_ack::handle_login_ack,
+        ping::handle_ping_request,
+    },
     packets::{ClientBoundPacket, Mc1_21_1ConnectionState, ServerBoundPacket},
 };
 
@@ -38,6 +46,8 @@ pub struct Server {
 pub const PACKET_BYTE_BUFFER_LENGTH: usize = 4096;
 
 pub struct Connection {
+    pub uuid: Uuid,
+    pub player_name: PlayerName,
     pub read_buf: Box<Buffer<PACKET_BYTE_BUFFER_LENGTH>>,
     pub write_buf: Box<Buffer<4096>>,
     pub state: Mc1_21_1ConnectionState,
@@ -51,6 +61,8 @@ impl Connection {
             stream,
             state: Mc1_21_1ConnectionState::default(),
             write_buf: Box::new(Buffer::new()),
+            uuid: Uuid::nil(),
+            player_name: VarString::from_str("Unknown Player").unwrap().into(),
         }
     }
 }
@@ -188,6 +200,9 @@ impl Server {
                 }
                 ServerBoundPacket::EncryptionResponseC2s(encryption_response) => {
                     handle_encryption_response(self, connection_id, &encryption_response)
+                }
+                ServerBoundPacket::LoginAckC2s(login_ack) => {
+                    handle_login_ack(self, connection_id, &login_ack)
                 }
             }?;
         }

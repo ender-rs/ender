@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::var_int::VarInt;
 
-#[derive(Debug, derive_more::DerefMut, derive_more::Deref, Serialize, Deserialize)]
+#[derive(Debug, derive_more::DerefMut, derive_more::Deref, Serialize, Deserialize, Clone)]
 pub struct VarString<const N: usize>(pub ArrayString<N>);
 
 impl<const N: usize> VarString<N> {
