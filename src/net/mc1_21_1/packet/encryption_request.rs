@@ -3,7 +3,7 @@ use packetize::{Decode, Encode};
 
 use crate::{var_int::VarInt, var_string::VarString};
 
-#[derive(Encode, Decode)]
+#[derive(Debug, Encode, Decode)]
 pub struct EncryptionRequestS2c {
     pub server_id: VarString<20>,
     pub public_key: ArrayVec<u8, 293>,
