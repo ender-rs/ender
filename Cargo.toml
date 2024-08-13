@@ -14,11 +14,13 @@ fastvarint = "0.3.0"
 fxhash = "0.2.1"
 mio = { version = "1.0.1", features = ["os-poll", "net"] }
 nonmax = { version = "0.5.5", features = ["serde"] }
+num-bigint = "0.4.6"
 packetize = { path = "./packetize" }
 rand = "0.8.5"
 rsa = "0.9.6"
 rsa-der = "0.3.0"
 serde = { version = "1.0.206", features = ["derive"] }
+sha1 = "0.10.6"
 simd-json = "0.13.10"
 slab = "0.4.9"
 tick-machine = "0.5.0"

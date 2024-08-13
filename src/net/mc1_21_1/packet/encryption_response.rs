@@ -1,6 +1,8 @@
 use arrayvec::ArrayVec;
+use num_bigint::BigInt;
 use packetize::{Decode, Encode};
 use rsa::Pkcs1v15Encrypt;
+use sha1::{Digest, Sha1};
 
 use crate::{
     net::{
@@ -50,6 +52,16 @@ pub fn handle_encryption_response(
         .unwrap();
 
     server.enable_encryption(&decrypted_shared_secret, connection_id)?;
+
+    let hash = Sha1::new()
+        .chain_update(&decrypted_shared_secret)
+        .chain_update(&server.public_key_der)
+        .finalize();
+    let hash = BigInt::from_signed_bytes_be(&hash).to_str_radix(16);
+    let connection = server.get_connection(connection_id);
+    let ip = connection.stream.peer_addr().unwrap();
+
+    // auth
 
     send_login_success_packet(server, connection_id)?;
 
