@@ -25,6 +25,7 @@ pub struct Server {
     pub private_key: RsaPrivateKey,
     pub public_key_der: Box<[u8]>,
     pub verify_tokens: HashMap<ConnectionId, [u8; 4]>,
+    encrypt_key: HashMap<ConnectionId, Vec<u8>>,
 }
 
 pub const PACKET_BYTE_BUFFER_LENGTH: usize = 4096;
@@ -85,7 +86,18 @@ impl Server {
             private_key,
             public_key_der,
             verify_tokens: HashMap::new(),
+            encrypt_key: HashMap::new(),
         }
+    }
+
+    pub fn enable_encryption(
+        &mut self,
+        shared_secret: &[u8],
+        connection_id: ConnectionId,
+    ) -> Result<(), ()> {
+        let crypt_key: [u8; 16] = shared_secret.try_into().unwrap();
+        self.encrypt_key.insert(connection_id, crypt_key.to_vec());
+        Ok(())
     }
 
     pub fn get_connection(&mut self, connection_id: ConnectionId) -> &mut Connection {

@@ -34,10 +34,18 @@ pub fn handle_encryption_response(
 
     if decrypted_veify_token != *verify_token {
         dbg!("Verify token mismatch!");
+        server.verify_tokens.remove(&connection_id);
         return Err(());
     }
 
     server.verify_tokens.remove(&connection_id);
+
+    let decrypted_shared_secret = server
+        .private_key
+        .decrypt(Pkcs1v15Encrypt, &encryption_response.shared_secret)
+        .unwrap();
+
+    server.enable_encryption(&decrypted_shared_secret, connection_id)?;
 
     Ok(())
 }
