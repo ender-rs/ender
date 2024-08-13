@@ -2,7 +2,7 @@ use std::{collections::HashMap, hash::Hash, io::Write, time::Duration};
 
 use aes::cipher::{generic_array, BlockEncryptMut, BlockSizeUser, KeyIvInit};
 use cfb8::Encryptor;
-use fastbuf::{Buffer, ReadBuf, ReadToBuf};
+use fastbuf::{Buf, Buffer, ReadBuf, ReadToBuf};
 use fxhash::{FxBuildHasher, FxHashMap, FxHashSet, FxHasher};
 use packetize::{ClientBoundPacketStream, ServerBoundPacketStream};
 use rand::thread_rng;
@@ -52,6 +52,8 @@ pub struct Connection {
     pub write_buf: Box<Buffer<4096>>,
     pub state: Mc1_21_1ConnectionState,
     pub stream: mio::net::TcpStream,
+    pub cipher: Encryptor<aes::Aes128>,
+    pub encrypt_key: Vec<u8>,
 }
 
 impl Connection {
@@ -216,6 +218,7 @@ impl Server {
     ) -> Result<(), ()> {
         let connection = self.get_connection(connection_id);
         let buf = &mut *connection.write_buf;
+        // 암호화 적용 해야함
         connection.state.encode_client_bound_packet(packet, buf)?;
         Ok(())
     }
@@ -245,7 +248,7 @@ impl Server {
         (pub_key, priv_key)
     }
 
-    pub fn encryption(
+    fn encryption(
         buf: &mut bytes::BytesMut,
         mut cipher: cfb8::Encryptor<aes::Aes128>,
     ) -> bytes::BytesMut {
