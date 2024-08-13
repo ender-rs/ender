@@ -7,7 +7,9 @@ use crate::{
     net::{
         mc1_21_1::packet::encryption_request::EncryptionRequestS2c,
         server::{ConnectionId, Server},
-    }, player_name::PlayerName, var_string::VarString
+    },
+    player_name::PlayerName,
+    var_string::VarString,
 };
 
 #[derive(Debug, Encode, Decode)]
@@ -29,7 +31,7 @@ pub fn handle_login_start(
 
     dbg!(public_key_der.len());
 
-    let mut public_key = ArrayVec::<u8, 293>::new();
+    let mut public_key = ArrayVec::<u8, 161>::new();
     unsafe {
         std::ptr::copy_nonoverlapping(
             public_key_der.as_ptr(),
