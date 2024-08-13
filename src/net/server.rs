@@ -39,6 +39,7 @@ pub struct Server {
     pub private_key: RsaPrivateKey,
     pub public_key_der: Box<[u8]>,
     pub verify_tokens: HashMap<ConnectionId, [u8; 4], FxBuildHasher>,
+    pub reqwest_client: reqwest::blocking::Client,
 }
 
 pub const PACKET_BYTE_BUFFER_LENGTH: usize = 4096;
@@ -89,6 +90,8 @@ impl Server {
         )
         .into_boxed_slice();
 
+        let reqwest_client = reqwest::blocking::Client::new();
+
         let poll = mio::Poll::new().unwrap();
         let addr = "[::]:25525".parse().unwrap();
         let mut listener = mio::net::TcpListener::bind(addr).unwrap();
@@ -100,6 +103,7 @@ impl Server {
             mio::Interest::READABLE,
         )
         .unwrap();
+
         let verify_tokens =
             HashMap::with_capacity_and_hasher(Self::CONNECTIONS_CAPACITY, FxBuildHasher::new());
 
@@ -112,6 +116,7 @@ impl Server {
             private_key,
             public_key_der,
             verify_tokens,
+            reqwest_client,
         }
     }
 

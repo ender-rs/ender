@@ -6,7 +6,7 @@ use sha1::{Digest, Sha1};
 
 use crate::{
     net::{
-        mc1_21_1::packet::login_success::LoginSuccessS2c,
+        mc1_21_1::packet::{authentication::authenticate, login_success::LoginSuccessS2c},
         server::{ConnectionId, Server},
     },
     player_name,
@@ -61,7 +61,10 @@ pub fn handle_encryption_response(
     let connection = server.get_connection(connection_id);
     let ip = connection.stream.peer_addr().unwrap();
 
-    // auth
+    let profile = authenticate(&connection.player_name.0.to_string(), &hash, &ip, server)?;
+    // Check if player are not banned
+    // Unpack textures
+    // Compression
 
     send_login_success_packet(server, connection_id)?;
 
