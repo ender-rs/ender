@@ -2,7 +2,7 @@ use std::{collections::HashMap, hash::Hash, io::Write, time::Duration};
 
 use aes::cipher::{generic_array, BlockEncryptMut, BlockSizeUser, KeyIvInit};
 use cfb8::Encryptor;
-use fastbuf::{Buf, Buffer, ReadBuf, ReadToBuf};
+use fastbuf::{Buf, Buffer, ReadBuf, ReadToBuf, WriteBuf};
 use fxhash::{FxBuildHasher, FxHashMap, FxHashSet, FxHasher};
 use packetize::{ClientBoundPacketStream, ServerBoundPacketStream};
 use rand::thread_rng;
@@ -39,8 +39,6 @@ pub struct Server {
     pub private_key: RsaPrivateKey,
     pub public_key_der: Box<[u8]>,
     pub verify_tokens: HashMap<ConnectionId, [u8; 4], FxBuildHasher>,
-    encrypt_key: HashMap<ConnectionId, Vec<u8>, FxBuildHasher>,
-    ciphers: HashMap<ConnectionId, Encryptor<aes::Aes128>, FxBuildHasher>,
 }
 
 pub const PACKET_BYTE_BUFFER_LENGTH: usize = 4096;
@@ -52,6 +50,8 @@ pub struct Connection {
     pub write_buf: Box<Buffer<4096>>,
     pub state: Mc1_21_1ConnectionState,
     pub stream: mio::net::TcpStream,
+    pub encrypt_key: Option<Vec<u8>>,
+    pub cipher: Option<Encryptor<aes::Aes128>>,
 }
 
 impl Connection {
@@ -63,6 +63,8 @@ impl Connection {
             write_buf: Box::new(Buffer::new()),
             uuid: Uuid::nil(),
             player_name: VarString::from_str("Unknown Player").unwrap().into(),
+            cipher: None,
+            encrypt_key: None,
         }
     }
 }
@@ -98,10 +100,6 @@ impl Server {
         .unwrap();
         let verify_tokens =
             HashMap::with_capacity_and_hasher(Self::CONNECTIONS_CAPACITY, FxBuildHasher::new());
-        let encrypt_key =
-            HashMap::with_capacity_and_hasher(Self::CONNECTIONS_CAPACITY, FxBuildHasher::new());
-        let ciphers =
-            HashMap::with_capacity_and_hasher(Self::CONNECTIONS_CAPACITY, FxBuildHasher::new());
 
         Self {
             poll,
@@ -112,8 +110,6 @@ impl Server {
             private_key,
             public_key_der,
             verify_tokens,
-            encrypt_key,
-            ciphers,
         }
     }
 
@@ -123,11 +119,10 @@ impl Server {
         connection_id: ConnectionId,
     ) -> Result<(), ()> {
         let crypt_key: [u8; 16] = shared_secret.try_into().unwrap();
-        self.ciphers.insert(
-            connection_id,
-            cfb8::Encryptor::<aes::Aes128>::new_from_slices(&crypt_key, &crypt_key).unwrap(),
-        );
-        self.encrypt_key.insert(connection_id, crypt_key.to_vec());
+        let connection = self.get_connection(connection_id);
+        connection.cipher =
+            Some(cfb8::Encryptor::<aes::Aes128>::new_from_slices(&crypt_key, &crypt_key).unwrap());
+        connection.encrypt_key = Some(crypt_key.to_vec());
         Ok(())
     }
 
@@ -216,8 +211,14 @@ impl Server {
     ) -> Result<(), ()> {
         let connection = self.get_connection(connection_id);
         let buf = &mut *connection.write_buf;
-        // 암호화 적용 해야함
         connection.state.encode_client_bound_packet(packet, buf)?;
+
+        if let Some(cipher) = &connection.cipher {
+            let mut encrypted_buf = bytes::BytesMut::from(buf.read(buf.remaining()));
+            Self::encryption(&mut encrypted_buf, cipher.clone());
+            buf.try_write(&encrypted_buf)?;
+        }
+
         Ok(())
     }
 
