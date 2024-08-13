@@ -1,7 +1,7 @@
 use std::{collections::HashMap, hash::Hash, io::Write, time::Duration};
 
-use aes::cipher::{generic_array, BlockEncryptMut, BlockSizeUser, KeyIvInit};
-use cfb8::Encryptor;
+use aes::cipher::{generic_array, BlockDecryptMut, BlockEncryptMut, BlockSizeUser, KeyIvInit};
+use cfb8::{Decryptor, Encryptor};
 use fastbuf::{Buf, Buffer, ReadBuf, ReadToBuf, WriteBuf};
 use fxhash::{FxBuildHasher, FxHashMap, FxHashSet, FxHasher};
 use packetize::{ClientBoundPacketStream, ServerBoundPacketStream};
@@ -51,7 +51,8 @@ pub struct Connection {
     pub state: Mc1_21_1ConnectionState,
     pub stream: mio::net::TcpStream,
     pub encrypt_key: Option<Vec<u8>>,
-    pub cipher: Option<Encryptor<aes::Aes128>>,
+    pub e_cipher: Option<Encryptor<aes::Aes128>>,
+    pub d_cipher: Option<Decryptor<aes::Aes128>>,
 }
 
 impl Connection {
@@ -63,7 +64,8 @@ impl Connection {
             write_buf: Box::new(Buffer::new()),
             uuid: Uuid::nil(),
             player_name: VarString::from_str("Unknown Player").unwrap().into(),
-            cipher: None,
+            e_cipher: None,
+            d_cipher: None,
             encrypt_key: None,
         }
     }
@@ -120,8 +122,12 @@ impl Server {
     ) -> Result<(), ()> {
         let crypt_key: [u8; 16] = shared_secret.try_into().unwrap();
         let connection = self.get_connection(connection_id);
-        connection.cipher =
-            Some(cfb8::Encryptor::<aes::Aes128>::new_from_slices(&crypt_key, &crypt_key).unwrap());
+
+        connection.e_cipher =
+            Some(Encryptor::<aes::Aes128>::new_from_slices(&crypt_key, &crypt_key).unwrap());
+        connection.d_cipher =
+            Some(Decryptor::<aes::Aes128>::new_from_slices(&crypt_key, &crypt_key).unwrap());
+
         connection.encrypt_key = Some(crypt_key.to_vec());
         Ok(())
     }
@@ -180,6 +186,13 @@ impl Server {
         while self.get_connection(connection_id).read_buf.remaining() != 0 {
             let connection = unsafe { self.connections.get_unchecked_mut(connection_id as usize) };
             let buf = &mut *connection.read_buf;
+
+            if let Some(cipher) = &mut connection.d_cipher {
+                let mut decrypted_buf = bytes::BytesMut::from(buf.read(buf.remaining()));
+                Server::decrypt_bytes(cipher, &mut decrypted_buf);
+                buf.try_write(&decrypted_buf)?;
+            }
+
             match connection.state.decode_server_bound_packet(buf)? {
                 ServerBoundPacket::HandShakeC2s(handshake) => {
                     handle_handshake(self, connection_id, &handshake)
@@ -213,7 +226,7 @@ impl Server {
         let buf = &mut *connection.write_buf;
         connection.state.encode_client_bound_packet(packet, buf)?;
 
-        if let Some(cipher) = &connection.cipher {
+        if let Some(cipher) = &connection.e_cipher {
             let mut encrypted_buf = bytes::BytesMut::from(buf.read(buf.remaining()));
             Self::encryption(&mut encrypted_buf, cipher.clone());
             buf.try_write(&encrypted_buf)?;
@@ -251,12 +264,19 @@ impl Server {
         buf: &mut bytes::BytesMut,
         mut cipher: cfb8::Encryptor<aes::Aes128>,
     ) -> bytes::BytesMut {
-        for chunk in buf.chunks_mut(cfb8::Encryptor::<aes::Aes128>::block_size()) {
+        for chunk in buf.chunks_mut(Encryptor::<aes::Aes128>::block_size()) {
             let gen_arr = generic_array::GenericArray::from_mut_slice(chunk);
             cipher.encrypt_block_mut(gen_arr);
         }
 
         buf.split()
+    }
+
+    fn decrypt_bytes(cipher: &mut cfb8::Decryptor<aes::Aes128>, bytes: &mut [u8]) {
+        for chunk in bytes.chunks_mut(Decryptor::<aes::Aes128>::block_size()) {
+            let gen_arr = GenericArray::from_mut_slice(chunk);
+            cipher.decrypt_block_mut(gen_arr);
+        }
     }
 }
 
