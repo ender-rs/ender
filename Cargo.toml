@@ -4,7 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+aes = "0.8.4"
 arrayvec = { version = "0.7.4", features = ["serde"] }
+bytes = "1.7.1"
+cfb8 = "0.8.1"
 derive_more = { version = "1.0.0", features = ["full"] }
 fastbuf = "0.20.0"
 fastvarint = "0.3.0"

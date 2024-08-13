@@ -1,10 +1,15 @@
-use std::{collections::HashMap, io::Write, time::Duration};
+use std::{collections::HashMap, hash::Hash, io::Write, time::Duration};
 
+use aes::cipher::{generic_array, BlockEncryptMut, BlockSizeUser, KeyIvInit};
+use cfb8::Encryptor;
 use fastbuf::{Buffer, ReadBuf, ReadToBuf};
 use fxhash::{FxBuildHasher, FxHashMap, FxHashSet, FxHasher};
 use packetize::{ClientBoundPacketStream, ServerBoundPacketStream};
 use rand::thread_rng;
-use rsa::{traits::PublicKeyParts, RsaPrivateKey, RsaPublicKey};
+use rsa::{
+    signature::digest::generic_array::GenericArray, traits::PublicKeyParts, RsaPrivateKey,
+    RsaPublicKey,
+};
 use slab::Slab;
 use tick_machine::{Tick, TickState};
 
@@ -27,6 +32,7 @@ pub struct Server {
     pub public_key_der: Box<[u8]>,
     pub verify_tokens: HashMap<ConnectionId, [u8; 4], FxBuildHasher>,
     encrypt_key: HashMap<ConnectionId, Vec<u8>, FxBuildHasher>,
+    ciphers: HashMap<ConnectionId, Encryptor<aes::Aes128>, FxBuildHasher>,
 }
 
 pub const PACKET_BYTE_BUFFER_LENGTH: usize = 4096;
@@ -82,6 +88,9 @@ impl Server {
             HashMap::with_capacity_and_hasher(Self::CONNECTIONS_CAPACITY, FxBuildHasher::new());
         let encrypt_key =
             HashMap::with_capacity_and_hasher(Self::CONNECTIONS_CAPACITY, FxBuildHasher::new());
+        let ciphers =
+            HashMap::with_capacity_and_hasher(Self::CONNECTIONS_CAPACITY, FxBuildHasher::new());
+
         Self {
             poll,
             tick_state: TickState::new(Self::TICK),
@@ -92,6 +101,7 @@ impl Server {
             public_key_der,
             verify_tokens,
             encrypt_key,
+            ciphers,
         }
     }
 
@@ -101,6 +111,10 @@ impl Server {
         connection_id: ConnectionId,
     ) -> Result<(), ()> {
         let crypt_key: [u8; 16] = shared_secret.try_into().unwrap();
+        self.ciphers.insert(
+            connection_id,
+            cfb8::Encryptor::<aes::Aes128>::new_from_slices(&crypt_key, &crypt_key).unwrap(),
+        );
         self.encrypt_key.insert(connection_id, crypt_key.to_vec());
         Ok(())
     }
@@ -214,6 +228,18 @@ impl Server {
         let priv_key = RsaPrivateKey::new(&mut rng, 1024).unwrap();
         let pub_key = RsaPublicKey::from(&priv_key);
         (pub_key, priv_key)
+    }
+
+    pub fn encryption(
+        buf: &mut bytes::BytesMut,
+        mut cipher: cfb8::Encryptor<aes::Aes128>,
+    ) -> bytes::BytesMut {
+        for chunk in buf.chunks_mut(cfb8::Encryptor::<aes::Aes128>::block_size()) {
+            let gen_arr = generic_array::GenericArray::from_mut_slice(chunk);
+            cipher.encrypt_block_mut(gen_arr);
+        }
+
+        buf.split()
     }
 }
 
