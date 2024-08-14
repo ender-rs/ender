@@ -47,7 +47,7 @@ pub fn handle_handshake(
     connection_id: ConnectionId,
     handshake: &HandShakeC2s,
 ) -> Result<(), ()> {
-    let connection = server.get_connection(connection_id);
+    let connection = server.get_connection_mut(connection_id);
     connection.state = match handshake.next_state {
         NextState::Status => Mc1_21_1ConnectionState::Status,
         NextState::Login => Mc1_21_1ConnectionState::Login,

@@ -5,13 +5,11 @@ use rsa::Pkcs1v15Encrypt;
 use sha1::{Digest, Sha1};
 
 use crate::{
+    http_request::HttpRequestEvent,
     net::{
         mc1_21_1::packet::{authentication::authenticate, login_success::LoginSuccessS2c},
         server::{ConnectionId, Server},
     },
-    player_name,
-    var_int::VarInt,
-    var_string::VarString,
 };
 
 use super::set_compression::SetCompressionS2c;
@@ -27,10 +25,11 @@ pub fn handle_encryption_response(
     connection_id: ConnectionId,
     encryption_response: &EncryptionResponseC2s,
 ) -> Result<(), ()> {
-    #[cfg(debug_assertions)]
-    println!("{encryption_response:?}");
+    // #[cfg(debug_assertions)]
+    // println!("{encryption_response:?}");
 
-    let verify_token = server.verify_tokens.get(&connection_id).ok_or(())?;
+    let connection = server.get_connection_mut(connection_id);
+    let verify_token = unsafe { connection.verify_token.assume_init() };
 
     let decrypted_veify_token = server
         .private_key
@@ -40,13 +39,10 @@ pub fn handle_encryption_response(
     dbg!(&decrypted_veify_token);
     dbg!(verify_token);
 
-    if decrypted_veify_token != *verify_token {
+    if decrypted_veify_token.as_slice() != verify_token {
         dbg!("Verify token mismatch!");
-        server.verify_tokens.remove(&connection_id);
         return Err(());
     }
-
-    server.verify_tokens.remove(&connection_id);
 
     let decrypted_shared_secret = server
         .private_key
@@ -60,14 +56,21 @@ pub fn handle_encryption_response(
         .chain_update(&server.public_key_der)
         .finalize();
     let hash = BigInt::from_signed_bytes_be(&hash).to_str_radix(16);
-    let connection = server.get_connection(connection_id);
-    let ip = connection.stream.peer_addr().unwrap();
+    let connection = server.get_connection_mut(connection_id);
+    let player_name = connection.player_name.to_string();
 
-    let profile = authenticate(&connection.player_name.0.to_string(), &hash, &ip, server)?;
     // Check if player are not banned
     // Unpack textures
     // Compression
     send_set_compression_packet(server, connection_id)?;
+
+    server.connect_http_request_client(
+        connection_id,
+        HttpRequestEvent::Auth {
+            player_name,
+            server_id: hash,
+        },
+    )?;
 
     send_login_success_packet(server, connection_id)?;
 
@@ -75,7 +78,7 @@ pub fn handle_encryption_response(
 }
 
 fn send_login_success_packet(server: &mut Server, connection_id: ConnectionId) -> Result<(), ()> {
-    let connection = server.get_connection(connection_id);
+    let connection = server.get_connection_mut(connection_id);
     let uuid = connection.uuid;
     let username = connection.player_name.clone();
     server.send_packet(
@@ -84,7 +87,6 @@ fn send_login_success_packet(server: &mut Server, connection_id: ConnectionId) -
             uuid,
             username,
             properties: Vec::new(),
-            strict_error_handling: false,
         }
         .into(),
     )?;

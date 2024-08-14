@@ -1,3 +1,5 @@
+use std::mem::MaybeUninit;
+
 use arrayvec::ArrayVec;
 use packetize::{Decode, Encode};
 use rand::random;
@@ -26,7 +28,8 @@ pub fn handle_login_start(
     dbg!(login_start);
 
     let verify_token: [u8; 4] = random();
-    server.verify_tokens.insert(connection_id, verify_token);
+    let connection = server.get_connection_mut(connection_id);
+    connection.verify_token = MaybeUninit::new(verify_token);
     let public_key_der = &server.public_key_der;
 
     dbg!(public_key_der.len());
@@ -64,7 +67,7 @@ pub fn handle_login_start(
     server.flush_write_buffer(connection_id);
 
     dbg!("Success send encrypt request");
-    let connection = server.get_connection(connection_id);
+    let connection = server.get_connection_mut(connection_id);
     connection.uuid = login_start.uuid;
     connection.player_name = login_start.name.clone();
     Ok(())

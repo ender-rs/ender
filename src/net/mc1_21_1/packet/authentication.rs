@@ -1,4 +1,3 @@
-use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use uuid::Uuid;
@@ -36,13 +35,14 @@ pub fn authenticate(
     server: &mut Server,
 ) -> Result<GameProfile, ()> {
     let address = format!("https://sessionserver.mojang.com/session/minecraft/hasJoined?username={username}&serverId={server_hash}&ip={ip}");
-    let response = server.reqwest_client.get(address).send().unwrap();
+    // let response = server.reqwest_client.get(address).send().unwrap();
 
-    match response.status() {
-        StatusCode::OK => {}
-        StatusCode::NO_CONTENT => Err("no content").unwrap(),
-        _ => Err("other").unwrap(),
-    }
-    let profile: GameProfile = response.json().unwrap();
-    Ok(profile)
+    // match response.status() {
+    //     StatusCode::OK => {}
+    //     StatusCode::NO_CONTENT => Err("no content").unwrap(),
+    //     _ => Err("other").unwrap(),
+    // }
+    // let profile: GameProfile = response.json().unwrap();
+    //Ok(profile)
+    todo!()
 }
