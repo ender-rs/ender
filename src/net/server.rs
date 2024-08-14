@@ -133,10 +133,6 @@ impl Server {
         )
         .unwrap();
 
-        let addr = SocketAddr::new(
-            get_if_addrs::get_if_addrs().unwrap().first().unwrap().ip(),
-            PORT,
-        );
         Self {
             poll,
             tick_state: TickState::new(Self::TICK),
@@ -248,8 +244,13 @@ impl Server {
 
     fn on_connection_read(&mut self, connection_id: ConnectionId) -> Result<(), ()> {
         let connection = unsafe { self.connections.get_unchecked_mut(connection_id) };
+        self.decrypt_read(&mut connection.read_buf, &mut connection.stream)?;
         connection.stream.read_to_buf(&mut connection.read_buf)?;
         self.on_read_packet(connection_id as ConnectionId)?;
+        Ok(())
+    }
+
+    fn decrypt_read(&mut self, dst: &mut impl WriteBuf, src: &mut impl Read) -> Result<(), ()> {
         Ok(())
     }
 
