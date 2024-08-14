@@ -3,7 +3,7 @@ use std::mem::transmute_copy;
 use fastbuf::{Buf, Buffer, ReadBuf};
 use packetize::{Decode, Encode, PacketStreamFormat};
 
-use crate::{net::server::PACKET_BYTE_BUFFER_LENGTH, var_int::VarInt};
+use crate::{net::login_server::PACKET_BYTE_BUFFER_LENGTH, var_int::VarInt};
 
 pub struct MinecraftPacketFormat;
 

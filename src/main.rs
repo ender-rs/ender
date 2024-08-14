@@ -1,5 +1,5 @@
-use ender::net::server::Server;
+use ender::net::login_server::LoginServer;
 
 fn main() {
-    Server::new().start_loop()
+    LoginServer::new().start_loop()
 }

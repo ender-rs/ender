@@ -12,4 +12,3 @@ pub struct LoginSuccessS2c {
     pub properties: Vec<Property>,
     pub strict_error_handling: bool,
 }
-

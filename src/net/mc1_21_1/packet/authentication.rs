@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use uuid::Uuid;
 
-use crate::{net::server::Server, var_string::VarString};
+use crate::{net::login_server::LoginServer, var_string::VarString};
 
 #[derive(Serialize, Deserialize, Debug, Encode, Decode, Clone)]
 pub struct Property {
@@ -33,7 +33,7 @@ pub fn authenticate(
     username: &str,
     server_hash: &str,
     ip: &SocketAddr,
-    server: &mut Server,
+    server: &mut LoginServer,
 ) -> Result<GameProfile, ()> {
     let address = format!("https://sessionserver.mojang.com/session/minecraft/hasJoined?username={username}&serverId={server_hash}&ip={ip}");
     // let response = server.reqwest_client.get(address).send().unwrap();

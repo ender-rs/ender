@@ -33,7 +33,11 @@ impl<const N: usize> Decode for VarString<N> {
         let mut string = VarString(ArrayString::new());
         let len = *VarInt::decode(buf)? as usize;
         unsafe { string.set_len(len) };
-        unsafe { string.as_bytes_mut().copy_from_slice(buf.read(len)) };
+        let src_slice = buf.read(len);
+        if src_slice.len() != len {
+            return Err(());
+        }
+        unsafe { string.as_bytes_mut().copy_from_slice(src_slice) };
         Ok(string)
     }
 }

@@ -8,7 +8,7 @@ use uuid::Uuid;
 use crate::{
     net::{
         mc1_21_1::packet::encryption_request::EncryptionRequestS2c,
-        server::{ConnectionId, Server},
+        login_server::{ConnectionId, LoginServer},
     },
     player_name::PlayerName,
     var_string::VarString,
@@ -21,7 +21,7 @@ pub struct LoginStartC2s {
 }
 
 pub fn handle_login_start(
-    server: &mut Server,
+    server: &mut LoginServer,
     connection_id: ConnectionId,
     login_start: &LoginStartC2s,
 ) -> Result<(), ()> {

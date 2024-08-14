@@ -1,7 +1,7 @@
 use packetize::{Decode, Encode};
 
 use crate::{
-    net::server::{Connection, ConnectionId, Server},
+    net::login_server::{Connection, ConnectionId, LoginServer},
     var_string::VarString,
 };
 
@@ -12,7 +12,7 @@ pub struct Disconnect(Box<VarString<32767>>);
 pub struct LoginDisconnectS2c(Disconnect);
 
 pub fn handle_disconnect(
-    server: &mut Server,
+    server: &mut LoginServer,
     connection_id: ConnectionId,
     disconnect: &Disconnect,
 ) {

@@ -1,6 +1,6 @@
 use packetize::{Decode, Encode};
 
-use crate::net::server::{ConnectionId, Server};
+use crate::net::login_server::{ConnectionId, LoginServer};
 
 #[derive(Debug, Encode, Decode)]
 pub struct PingRequestC2s {
@@ -8,7 +8,7 @@ pub struct PingRequestC2s {
 }
 
 pub fn handle_ping_request(
-    server: &mut Server,
+    server: &mut LoginServer,
     connection_id: ConnectionId,
     ping_request: &PingRequestC2s,
 ) -> Result<(), ()> {

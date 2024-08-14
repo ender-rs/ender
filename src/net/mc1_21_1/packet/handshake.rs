@@ -8,7 +8,7 @@ use crate::{
     net::{
         mc1_21_1::packets::Mc1_21_1ConnectionState,
         protocol_version::ProtocolVersion,
-        server::{ConnectionId, Server},
+        login_server::{ConnectionId, LoginServer},
     },
     var_int::VarInt,
 };
@@ -43,7 +43,7 @@ impl Decode for NextState {
 }
 
 pub fn handle_handshake(
-    server: &mut Server,
+    server: &mut LoginServer,
     connection_id: ConnectionId,
     handshake: &HandShakeC2s,
 ) -> Result<(), ()> {
@@ -53,6 +53,5 @@ pub fn handle_handshake(
         NextState::Login => Mc1_21_1ConnectionState::Login,
         NextState::Transfer => todo!(),
     };
-    dbg!(handshake);
     Ok(())
 }

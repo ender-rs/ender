@@ -8,7 +8,7 @@ use uuid::Uuid;
 use crate::{
     net::{
         protocol_version::ProtocolVersion,
-        server::{ConnectionId, Server},
+        login_server::{ConnectionId, LoginServer},
     },
     player_name::PlayerName,
     var_string::VarString,
@@ -18,7 +18,7 @@ use crate::{
 pub struct StatusRequestC2s;
 
 pub fn handle_status_request(
-    server: &mut Server,
+    server: &mut LoginServer,
     connection_id: ConnectionId,
     status_request: &StatusRequestC2s,
 ) -> Result<(), ()> {
@@ -116,7 +116,7 @@ pub struct Version {
 }
 
 pub fn handle_status_response(
-    server: &mut Server,
+    server: &mut LoginServer,
     connection_id: ConnectionId,
     status_response: StatusResponseS2c,
 ) {

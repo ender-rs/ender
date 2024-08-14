@@ -1,22 +1,38 @@
 use std::{
-    io::{Read, Write},
+    io::{BufReader, Read, Write},
     net::SocketAddr,
     str::FromStr,
+    sync::Arc,
 };
 
 use httparse::{Response, EMPTY_HEADER};
-use mio::{event::Event, Interest};
+use mio::{event::Event, net::TcpStream, Interest};
 use nonmax::NonMaxUsize;
-use rustls::pki_types::ServerName;
-
-use crate::{
-    http_request::HttpRequestEvent,
-    net::mc1_21_1::packet::{authentication::GameProfile, login_success::LoginSuccessS2c},
+use rustls::{
+    crypto::{aws_lc_rs, CryptoProvider},
+    pki_types::{CertificateDer, PrivateKeyDer, ServerName},
+    RootCertStore,
 };
 
-use super::server::{ConnectionId, HttpClient, Server};
+use crate::net::mc1_21_1::packet::{authentication::GameProfile, login_success::LoginSuccessS2c};
 
-impl Server {
+use super::login_server::{ConnectionId, LoginServer};
+
+pub struct HttpClient {
+    pub event: HttpRequestEvent,
+    pub stream: TcpStream,
+    pub connection_id: ConnectionId,
+    pub tls: rustls::ClientConnection,
+}
+
+pub enum HttpRequestEvent {
+    Auth {
+        player_name: String,
+        server_id: String,
+    },
+}
+
+impl LoginServer {
     pub fn on_http_client_event(
         &mut self,
         client_id: usize,
@@ -24,17 +40,7 @@ impl Server {
     ) -> Result<(), ()> {
         if selection_event.is_writable() {
             let client = unsafe { self.http_clients.get_unchecked_mut(client_id) };
-            dbg!(client.tls.wants_write());
             client.tls.write_tls(&mut client.stream).map_err(|_| ())?;
-            dbg!(client.tls.wants_write());
-            self.poll
-                .registry()
-                .reregister(
-                    &mut client.stream,
-                    mio::Token(client_id + Self::HTTP_CLIENT_ID_OFFSET),
-                    Interest::READABLE,
-                )
-                .unwrap();
         } else {
             self.on_http_client_read(client_id)?;
         }
@@ -70,7 +76,7 @@ impl Server {
             &self.poll.registry(),
             &mut client.stream,
             mio::Token(client_id + Self::HTTP_CLIENT_ID_OFFSET),
-            Interest::READABLE | Interest::WRITABLE,
+            Interest::READABLE.add(Interest::WRITABLE),
         )
         .unwrap();
         self.on_http_client_connect(client_id)?;
@@ -101,19 +107,14 @@ impl Server {
     fn on_http_client_read(&mut self, client_id: usize) -> Result<(), ()> {
         let client = unsafe { self.http_clients.get_unchecked_mut(client_id) };
         let read_length = client.tls.read_tls(&mut client.stream).map_err(|_| ())?;
-        dbg!(read_length);
         if read_length == 0 {
             Err(())?
         }
-        let io_state = client.tls.process_new_packets().map_err(|err| ())?;
-        dbg!(io_state.tls_bytes_to_write());
-        dbg!(client.tls.wants_write());
-        if client.tls.wants_write() {
+        let io_state = client.tls.process_new_packets().map_err(|_| ())?;
+        if io_state.tls_bytes_to_write() != 0 {
             client.tls.write_tls(&mut client.stream).map_err(|_| ())?;
         }
-        dbg!(client.tls.wants_write());
         let plaintext_read_length = io_state.plaintext_bytes_to_read();
-        dbg!(plaintext_read_length);
         if plaintext_read_length != 0 {
             let mut buffer = vec![0u8; io_state.plaintext_bytes_to_read()];
             client
@@ -186,4 +187,83 @@ impl Server {
         }
         client
     }
+}
+
+pub fn make_tls_config() -> Arc<rustls::ClientConfig> {
+    let mut root_store = RootCertStore::empty();
+
+    root_store.extend(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
+
+    let config = rustls::ClientConfig::builder_with_provider(
+        CryptoProvider {
+            cipher_suites: aws_lc_rs::DEFAULT_CIPHER_SUITES.to_vec(),
+            ..aws_lc_rs::default_provider()
+        }
+        .into(),
+    )
+    .with_protocol_versions(rustls::DEFAULT_VERSIONS)
+    .expect("inconsistent cipher-suite/versions selected")
+    .with_root_certificates(root_store);
+
+    println!("generating certificate...");
+    let (certs, key) = generate_certifacte();
+    println!("certificate generated successfully");
+
+    let config = config
+        .with_client_auth_cert(certs, key)
+        .expect("invalid client auth certs/key");
+
+    Arc::new(config)
+}
+
+fn generate_certifacte() -> (Vec<CertificateDer<'static>>, PrivateKeyDer<'static>) {
+    use rand::rngs::OsRng;
+    use rsa::pkcs8::EncodePrivateKey;
+    use rsa::RsaPrivateKey;
+
+    use rcgen::{date_time_ymd, CertificateParams, DistinguishedName};
+
+    let mut params: CertificateParams = Default::default();
+    params.not_before = date_time_ymd(2021, 5, 19);
+    params.not_after = date_time_ymd(4096, 1, 1);
+    params.distinguished_name = DistinguishedName::new();
+
+    let mut rng = OsRng;
+    let bits = 2048;
+    let private_key = RsaPrivateKey::new(&mut rng, bits).unwrap();
+    let private_key_der = private_key.to_pkcs8_der().unwrap();
+    let key_pair = rcgen::KeyPair::try_from(private_key_der.as_bytes()).unwrap();
+
+    let cert = params.self_signed(&key_pair).unwrap();
+    let pem_serialized = cert.pem();
+    let pem = pem::parse(&pem_serialized).unwrap();
+    let der_serialized = pem.contents();
+
+    (
+        load_certs(der_serialized),
+        load_private_key(key_pair.serialize_pem().as_bytes()),
+    )
+}
+
+fn load_certs(der_encoded_certs: &[u8]) -> Vec<CertificateDer<'static>> {
+    let mut reader = BufReader::new(der_encoded_certs);
+    rustls_pemfile::certs(&mut reader)
+        .map(|result| result.unwrap())
+        .collect()
+}
+
+fn load_private_key(der_encoded_key: &[u8]) -> PrivateKeyDer<'static> {
+    let mut reader = BufReader::new(der_encoded_key);
+
+    loop {
+        match rustls_pemfile::read_one(&mut reader).expect("cannot parse private key .pem file") {
+            Some(rustls_pemfile::Item::Pkcs1Key(key)) => return key.into(),
+            Some(rustls_pemfile::Item::Pkcs8Key(key)) => return key.into(),
+            Some(rustls_pemfile::Item::Sec1Key(key)) => return key.into(),
+            None => break,
+            _ => {}
+        }
+    }
+
+    panic!("no keys found in given data (encrypted keys not supported)",);
 }

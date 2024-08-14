@@ -1,6 +1,6 @@
 #![feature(build_hasher_default_const_new)]
 
-pub mod http_request;
+pub mod identifier;
 pub mod net;
 pub mod packet_format;
 pub mod player_name;

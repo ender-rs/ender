@@ -4,12 +4,9 @@ use packetize::{Decode, Encode};
 use rsa::Pkcs1v15Encrypt;
 use sha1::{Digest, Sha1};
 
-use crate::{
-    http_request::HttpRequestEvent,
-    net::{
-        mc1_21_1::packet::{authentication::authenticate, login_success::LoginSuccessS2c},
-        server::{ConnectionId, Server},
-    },
+use crate::net::{
+    http_server::HttpRequestEvent,
+    login_server::{ConnectionId, LoginServer},
 };
 
 use super::set_compression::SetCompressionS2c;
@@ -21,7 +18,7 @@ pub struct EncryptionResponseC2s {
 }
 
 pub fn handle_encryption_response(
-    server: &mut Server,
+    server: &mut LoginServer,
     connection_id: ConnectionId,
     encryption_response: &EncryptionResponseC2s,
 ) -> Result<(), ()> {
@@ -35,9 +32,6 @@ pub fn handle_encryption_response(
         .private_key
         .decrypt(Pkcs1v15Encrypt, &encryption_response.verify_token)
         .unwrap();
-
-    dbg!(&decrypted_veify_token);
-    dbg!(verify_token);
 
     if decrypted_veify_token.as_slice() != verify_token {
         dbg!("Verify token mismatch!");
@@ -75,14 +69,19 @@ pub fn handle_encryption_response(
     Ok(())
 }
 
-fn send_set_compression_packet(server: &mut Server, connection_id: ConnectionId) -> Result<(), ()> {
+fn send_set_compression_packet(
+    server: &mut LoginServer,
+    connection_id: ConnectionId,
+) -> Result<(), ()> {
+    const DEFAULT_COMPRESSION_THRESHOLD: i32 = 256;
     server.send_packet(
         connection_id,
         &SetCompressionS2c {
-            threshold: 256.into(),
+            threshold: DEFAULT_COMPRESSION_THRESHOLD.into(),
         }
         .into(),
     )?;
     server.flush_write_buffer(connection_id);
+    server.enable_compression(connection_id, DEFAULT_COMPRESSION_THRESHOLD)?;
     Ok(())
 }
