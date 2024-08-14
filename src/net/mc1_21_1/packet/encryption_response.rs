@@ -14,6 +14,8 @@ use crate::{
     var_string::VarString,
 };
 
+use super::set_compression::SetCompressionS2c;
+
 #[derive(Debug, Encode, Decode)]
 pub struct EncryptionResponseC2s {
     pub shared_secret: ArrayVec<u8, 128>,
@@ -65,6 +67,7 @@ pub fn handle_encryption_response(
     // Check if player are not banned
     // Unpack textures
     // Compression
+    send_set_compression_packet(server, connection_id)?;
 
     send_login_success_packet(server, connection_id)?;
 
@@ -82,6 +85,18 @@ fn send_login_success_packet(server: &mut Server, connection_id: ConnectionId) -
             username,
             properties: Vec::new(),
             strict_error_handling: false,
+        }
+        .into(),
+    )?;
+    server.flush_write_buffer(connection_id);
+    Ok(())
+}
+
+fn send_set_compression_packet(server: &mut Server, connection_id: ConnectionId) -> Result<(), ()> {
+    server.send_packet(
+        connection_id,
+        &SetCompressionS2c {
+            threshold: 256.into(),
         }
         .into(),
     )?;

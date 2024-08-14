@@ -11,6 +11,7 @@ use super::packet::{
     login_start::LoginStartC2s,
     login_success::LoginSuccessS2c,
     ping::{PingRequestC2s, PingResponseS2c},
+    set_compression::SetCompressionS2c,
     status::{StatusRequestC2s, StatusResponseS2c},
 };
 
@@ -29,8 +30,9 @@ pub enum Mc1_21_1ConnectionState {
         LoginStartC2s,
         #[id(0)] LoginDisconnectS2c,
         #[id(1)] EncryptionRequestS2c,
-        EncryptionResponseC2s,
+        #[id(0x01)] EncryptionResponseC2s,
         #[id(0x02)] LoginSuccessS2c,
+        #[id(0x03)] SetCompressionS2c,
         #[id(0x03)] LoginAckC2s,
     ),
 }
