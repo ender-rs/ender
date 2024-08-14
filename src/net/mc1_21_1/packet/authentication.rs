@@ -1,17 +1,18 @@
+use packetize::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use uuid::Uuid;
 
-use crate::net::server::Server;
+use crate::{net::server::Server, var_string::VarString};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Encode, Decode, Clone)]
 pub struct Property {
-    pub name: String,
-    pub value: String,
-    pub signature: Option<String>,
+    pub name: Box<VarString<32767>>,
+    pub value: Box<VarString<32767>>,
+    pub signature: Option<Box<VarString<32767>>>,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub enum ProfileAction {
     #[serde(rename = "FORCED_NAME_CHANGE")]
     ForcedNameChange,
@@ -19,7 +20,7 @@ pub enum ProfileAction {
     UsingBannedSkin,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct GameProfile {
     pub id: Uuid,
     pub name: String,

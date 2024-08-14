@@ -244,13 +244,18 @@ impl Server {
 
     fn on_connection_read(&mut self, connection_id: ConnectionId) -> Result<(), ()> {
         let connection = unsafe { self.connections.get_unchecked_mut(connection_id) };
-        self.decrypt_read(&mut connection.read_buf, &mut connection.stream)?;
-        connection.stream.read_to_buf(&mut connection.read_buf)?;
+        if let Some(ref mut cipher) = &mut connection.d_cipher {
+            #[allow(invalid_value)]
+            let mut buf =
+                unsafe { MaybeUninit::<[u8; PACKET_BYTE_BUFFER_LENGTH]>::uninit().assume_init() };
+            let read_length = connection.stream.read(&mut buf).map_err(|_| ())?;
+            let buf = &mut buf[..read_length];
+            Server::decrypt_bytes(cipher, buf);
+            connection.read_buf.try_write(buf)?;
+        } else {
+            connection.stream.read_to_buf(&mut connection.read_buf)?;
+        }
         self.on_read_packet(connection_id as ConnectionId)?;
-        Ok(())
-    }
-
-    fn decrypt_read(&mut self, dst: &mut impl WriteBuf, src: &mut impl Read) -> Result<(), ()> {
         Ok(())
     }
 
@@ -258,12 +263,6 @@ impl Server {
         while self.get_connection_mut(connection_id).read_buf.remaining() != 0 {
             let connection = unsafe { self.connections.get_unchecked_mut(connection_id as usize) };
             let buf = &mut *connection.read_buf;
-
-            if let Some(cipher) = &mut connection.d_cipher {
-                let mut decrypted_buf = bytes::BytesMut::from(buf.read(buf.remaining()));
-                Server::decrypt_bytes(cipher, &mut decrypted_buf);
-                buf.try_write(&decrypted_buf)?;
-            }
 
             if let (Some(threshold), Some(_)) = (
                 connection.compression_threshold,
@@ -389,7 +388,9 @@ impl Server {
     pub fn close_connection(&mut self, connection_id: ConnectionId) {
         let connection = unsafe { self.connections.get_unchecked_mut(connection_id as usize) };
         if let Some(client_id) = connection.related_http_client_id {
-            self.http_clients.remove(client_id.get());
+            let mut client = self.http_clients.remove(client_id.get());
+            let _result = client.stream.shutdown(std::net::Shutdown::Both);
+            mio::Registry::deregister(&self.poll.registry(), &mut client.stream).unwrap();
         }
         mio::Registry::deregister(&self.poll.registry(), &mut connection.stream).unwrap();
         let _result = connection.stream.shutdown(std::net::Shutdown::Both);
@@ -405,16 +406,11 @@ impl Server {
         (pub_key, priv_key)
     }
 
-    fn encryption(
-        buf: &mut bytes::BytesMut,
-        mut cipher: cfb8::Encryptor<aes::Aes128>,
-    ) -> bytes::BytesMut {
+    fn encryption(buf: &mut bytes::BytesMut, mut cipher: cfb8::Encryptor<aes::Aes128>) {
         for chunk in buf.chunks_mut(Encryptor::<aes::Aes128>::block_size()) {
             let gen_arr = generic_array::GenericArray::from_mut_slice(chunk);
             cipher.encrypt_block_mut(gen_arr);
         }
-
-        buf.split()
     }
 
     fn decrypt_bytes(cipher: &mut cfb8::Decryptor<aes::Aes128>, bytes: &mut [u8]) {

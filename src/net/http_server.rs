@@ -10,7 +10,8 @@ use nonmax::NonMaxUsize;
 use rustls::pki_types::ServerName;
 
 use crate::{
-    http_request::HttpRequestEvent, net::mc1_21_1::packet::login_success::LoginSuccessS2c,
+    http_request::HttpRequestEvent,
+    net::mc1_21_1::packet::{authentication::GameProfile, login_success::LoginSuccessS2c},
 };
 
 use super::server::{ConnectionId, HttpClient, Server};
@@ -146,14 +147,17 @@ impl Server {
                     unsafe { self.connections.get_unchecked_mut(client.connection_id) };
                 let uuid = connection.uuid;
                 let player_name = connection.player_name.clone();
-                println!("read: {}", String::from_utf8(buf).unwrap());
                 println!("LoginSuccess");
+
+                let game_profile: GameProfile =
+                    simd_json::serde::from_reader(buf.as_slice()).map_err(|_| ())?;
                 println!(
                     "{:?}",
                     LoginSuccessS2c {
                         uuid,
                         username: player_name.clone(),
-                        properties: Vec::new(),
+                        properties: game_profile.properties.clone(),
+                        strict_error_handling: false
                     }
                 );
                 self.send_packet(
@@ -161,7 +165,8 @@ impl Server {
                     &LoginSuccessS2c {
                         uuid,
                         username: player_name,
-                        properties: Vec::new(),
+                        properties: game_profile.properties,
+                        strict_error_handling: false,
                     }
                     .into(),
                 )?;
@@ -174,6 +179,7 @@ impl Server {
     pub fn close_http_client(&mut self, client_id: usize) -> HttpClient {
         let mut client = self.http_clients.remove(client_id);
         mio::Registry::deregister(&self.poll.registry(), &mut client.stream).unwrap();
+        let _result = client.stream.shutdown(std::net::Shutdown::Both);
         let connection = self.connections.get_mut(client.connection_id);
         if let Some(connection) = connection {
             connection.related_http_client_id = None;
