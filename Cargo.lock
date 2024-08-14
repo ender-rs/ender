@@ -368,6 +368,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "crc32fast"
+version = "1.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a97769d94ddab943e4510d138150169a2758b5ef3eb191a9ee688de3e23ef7b3"
+dependencies = [
+ "cfg-if",
+]
+
+[[package]]
 name = "crypto-common"
 version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -523,6 +532,7 @@ dependencies = [
  "dns-lookup",
  "fastbuf",
  "fastvarint",
+ "flate2",
  "get_if_addrs",
  "httparse",
  "hyper",
@@ -581,6 +591,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c3eab2cefe6b9771eabf36a47bb73639c46084e990d94c1c91716e0731ba6ec3"
 dependencies = [
  "fastbuf",
+]
+
+[[package]]
+name = "flate2"
+version = "1.0.31"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7f211bbe8e69bbd0cfdea405084f128ae8b4aaa6b0b522fc8f2b009084797920"
+dependencies = [
+ "crc32fast",
+ "miniz_oxide",
 ]
 
 [[package]]
@@ -1126,7 +1146,7 @@ dependencies = [
 
 [[package]]
 name = "packetize"
-version = "0.80.0"
+version = "0.79.0"
 dependencies = [
  "arrayvec",
  "fastbuf",
@@ -1139,7 +1159,7 @@ dependencies = [
 
 [[package]]
 name = "packetize_derive"
-version = "0.80.0"
+version = "0.79.0"
 dependencies = [
  "proc-macro2",
  "quote",

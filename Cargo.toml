@@ -12,6 +12,7 @@ derive_more = { version = "1.0.0", features = ["full"] }
 dns-lookup = "2.0.4"
 fastbuf = "0.20.0"
 fastvarint = "0.3.0"
+flate2 = "1.0.31"
 get_if_addrs = "0.5.3"
 httparse = "1.9.4"
 hyper = "1.4.1"

@@ -1,8 +1,16 @@
-use std::{io::Write, mem::MaybeUninit, net::SocketAddr, sync::Arc, time::Duration};
+use std::{
+    io::{Read, Write},
+    mem::MaybeUninit,
+    net::SocketAddr,
+    sync::Arc,
+    time::Duration,
+};
 
 use aes::cipher::{generic_array, BlockDecryptMut, BlockEncryptMut, BlockSizeUser, KeyIvInit};
+use bytes::BytesMut;
 use cfb8::{Decryptor, Encryptor};
-use fastbuf::{Buffer, ReadBuf, ReadToBuf, WriteBuf};
+use fastbuf::{Buf, Buffer, ReadBuf, ReadToBuf, WriteBuf};
+use flate2::{bufread::ZlibEncoder, write::ZlibDecoder, Compression};
 use mio::{event::Event, net::TcpStream, Interest};
 use nonmax::NonMaxUsize;
 use packetize::{ClientBoundPacketStream, ServerBoundPacketStream};
@@ -53,6 +61,7 @@ pub struct HttpClient {
 }
 
 pub const PACKET_BYTE_BUFFER_LENGTH: usize = 4096;
+pub const MAX_PACKET_SIZE: i32 = 2097152;
 
 pub struct Connection {
     pub uuid: Uuid,
@@ -64,6 +73,8 @@ pub struct Connection {
     pub encrypt_key: Option<Vec<u8>>,
     pub e_cipher: Option<Encryptor<aes::Aes128>>,
     pub d_cipher: Option<Decryptor<aes::Aes128>>,
+    pub compression_threshold: Option<i32>,
+    pub compression_level: Option<u32>,
     pub verify_token: MaybeUninit<[u8; 4]>,
     pub related_http_client_id: Option<NonMaxUsize>,
 }
@@ -80,6 +91,8 @@ impl Connection {
             e_cipher: None,
             d_cipher: None,
             encrypt_key: None,
+            compression_threshold: None,
+            compression_level: None,
             verify_token: MaybeUninit::uninit(),
             related_http_client_id: None,
         }
@@ -151,6 +164,21 @@ impl Server {
             Some(Decryptor::<aes::Aes128>::new_from_slices(&crypt_key, &crypt_key).unwrap());
 
         connection.encrypt_key = Some(crypt_key.to_vec());
+
+        Ok(())
+    }
+
+    pub fn enable_compression(
+        &mut self,
+        connection_id: ConnectionId,
+        threshold: i32,
+        level: u32,
+    ) -> Result<(), ()> {
+        let connection = self.get_connection_mut(connection_id);
+
+        connection.compression_level = Some(level);
+        connection.compression_threshold = Some(threshold);
+
         Ok(())
     }
 
@@ -236,6 +264,21 @@ impl Server {
                 buf.try_write(&decrypted_buf)?;
             }
 
+            if let (Some(threshold), Some(_)) = (
+                connection.compression_threshold,
+                connection.compression_level,
+            ) {
+                let mut decompressed_buf = Vec::new();
+                let data_length = buf.remaining();
+                if data_length > 0 {
+                    let compressed_data = buf.read(data_length as usize);
+                    let mut decoder = flate2::read::ZlibDecoder::new(&compressed_data[..]);
+                    decoder.read_to_end(&mut decompressed_buf);
+                    buf.clear();
+                    buf.write(&decompressed_buf);
+                }
+            }
+
             match connection.state.decode_server_bound_packet(buf)? {
                 ServerBoundPacket::HandShakeC2s(handshake) => {
                     handle_handshake(self, connection_id, &handshake)
@@ -267,7 +310,62 @@ impl Server {
     ) -> Result<(), ()> {
         let connection = self.get_connection_mut(connection_id);
         let buf = &mut *connection.write_buf;
+        let start_len = buf.remaining();
         connection.state.encode_client_bound_packet(packet, buf)?;
+
+        let data_len = buf.remaining() - start_len;
+
+        if let (Some(threshold), Some(compression_level)) = (
+            connection.compression_threshold,
+            connection.compression_level,
+        ) {
+            if data_len > threshold as usize {
+                let mut compress_buf = Vec::new();
+                let mut z = ZlibEncoder::new(
+                    &buf.get_continuous(data_len)[start_len..],
+                    Compression::new(compression_level),
+                );
+
+                let packet_len = data_len + z.read_to_end(&mut compress_buf).unwrap();
+
+                if packet_len >= MAX_PACKET_SIZE as usize {
+                    return Err(());
+                }
+
+                drop(z);
+
+                buf.advance(start_len);
+
+                buf.write(&compress_buf);
+            } else {
+                let data_len_size = 1;
+                let packet_len = data_len_size + data_len;
+
+                if packet_len >= MAX_PACKET_SIZE as usize {
+                    return Err(());
+                }
+
+                let data_prefix_len = packet_len + data_len_size;
+
+                for _ in 0..data_prefix_len {
+                    buf.write(&[0]);
+                }
+
+                let mut temp = vec![0; data_len];
+                let mut bytes_read = 0;
+                while bytes_read < data_len {
+                    let chunk = buf.read(data_len - bytes_read);
+                    if chunk.is_empty() {
+                        return Err(());
+                    }
+                    temp[bytes_read..bytes_read + chunk.len()].copy_from_slice(chunk);
+                    bytes_read += chunk.len();
+                }
+
+                buf.advance(data_prefix_len);
+                buf.write(&temp);
+            }
+        }
 
         if let Some(cipher) = &connection.e_cipher {
             let mut encrypted_buf = bytes::BytesMut::from(buf.read(buf.remaining()));
