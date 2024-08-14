@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use arrayvec::{ArrayString, ArrayVec};
-use packetize::{Decode, Encode, Packet};
+use packetize::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 

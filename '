@@ -4,6 +4,7 @@ use aes::cipher::{generic_array, BlockDecryptMut, BlockEncryptMut, BlockSizeUser
 use cfb8::{Decryptor, Encryptor};
 use fastbuf::{Buffer, ReadBuf, ReadToBuf, WriteBuf};
 use mio::{event::Event, net::TcpStream, Interest};
+use native_tls::{TlsConnector, TlsStream};
 use nonmax::NonMaxUsize;
 use packetize::{ClientBoundPacketStream, ServerBoundPacketStream};
 use rand::thread_rng;
@@ -11,6 +12,7 @@ use rsa::{
     signature::digest::generic_array::GenericArray, traits::PublicKeyParts, RsaPrivateKey,
     RsaPublicKey,
 };
+use rustls::pki_types::ServerName;
 use slab::Slab;
 use tick_machine::{Tick, TickState};
 use uuid::Uuid;
@@ -27,29 +29,29 @@ use crate::{
 use super::mc1_21_1::{
     packet::{
         encryption_response::handle_encryption_response, login_ack::handle_login_ack,
-        ping::handle_ping_request,
+        login_success::LoginSuccessS2c, ping::handle_ping_request,
     },
     packets::{ClientBoundPacket, Mc1_21_1ConnectionState, ServerBoundPacket},
 };
 
-//TODO rename to LoginServer
 pub struct Server {
-    pub poll: mio::Poll,
+    poll: mio::Poll,
     listener: mio::net::TcpListener,
     tick_state: TickState,
-    pub connections: Slab<Connection>,
+    connections: Slab<Connection>,
     pub public_key: RsaPublicKey,
     pub private_key: RsaPrivateKey,
     pub public_key_der: Box<[u8]>,
-    pub http_clients: Slab<HttpClient>,
-    pub tls_config: Arc<rustls::ClientConfig>,
+    http_clients: Slab<HttpClient>,
+    pub addr: SocketAddr,
+    tls_config: Arc<rustls::ClientConfig>,
 }
 
 pub struct HttpClient {
-    pub event: HttpRequestEvent,
-    pub stream: TcpStream,
-    pub connection_id: ConnectionId,
-    pub tls: rustls::ClientConnection,
+    event: HttpRequestEvent,
+    stream: TcpStream,
+    connection_id: ConnectionId,
+    tls: rustls::ClientConnection,
 }
 
 pub const PACKET_BYTE_BUFFER_LENGTH: usize = 4096;
@@ -58,7 +60,7 @@ pub struct Connection {
     pub uuid: Uuid,
     pub player_name: PlayerName,
     pub read_buf: Box<Buffer<PACKET_BYTE_BUFFER_LENGTH>>,
-    pub write_buf: Box<Buffer<PACKET_BYTE_BUFFER_LENGTH>>,
+    pub write_buf: Box<Buffer<4096>>,
     pub state: Mc1_21_1ConnectionState,
     pub stream: mio::net::TcpStream,
     pub encrypt_key: Option<Vec<u8>>,
@@ -92,7 +94,7 @@ impl Server {
     const LISTENER_KEY: usize = usize::MAX;
     const CONNECTIONS_CAPACITY: usize = 1000;
     const HTTP_REQUESTS_CAPACITY: usize = 30;
-    pub const HTTP_CLIENT_ID_OFFSET: usize = Self::CONNECTIONS_CAPACITY;
+    const HTTP_CLIENT_ID_OFFSET: usize = Self::CONNECTIONS_CAPACITY;
     const TICK: Duration = Duration::from_millis(50);
 
     pub fn new() -> Self {
@@ -133,6 +135,7 @@ impl Server {
             private_key,
             public_key_der,
             http_clients: Slab::with_capacity(Self::HTTP_REQUESTS_CAPACITY),
+            addr,
             tls_config,
         }
     }
@@ -211,11 +214,140 @@ impl Server {
             match self.on_http_client_event(client_id, &selection_event) {
                 Ok(_) => {}
                 Err(_) => {
-                    let client = self.close_http_client(client_id);
-                    self.close_connection(client.connection_id);
+                    self.close_http_client(client_id);
                 }
             }
         }
+    }
+
+    pub fn on_http_client_event(
+        &mut self,
+        client_id: usize,
+        selection_event: &Event,
+    ) -> Result<(), ()> {
+        if selection_event.is_writable() {
+            let client = unsafe { self.http_clients.get_unchecked_mut(client_id) };
+            dbg!(client.tls.wants_write());
+            client.tls.write_tls(&mut client.stream).map_err(|_| ())?;
+            dbg!(client.tls.wants_write());
+        } else {
+            self.on_http_client_read(client_id)?;
+        }
+        Ok(())
+    }
+
+    pub fn connect_http_request_client(
+        &mut self,
+        connection_id: ConnectionId,
+        event: HttpRequestEvent,
+    ) -> Result<(), ()> {
+        let addr = dns_lookup::lookup_host("sessionserver.mojang.com")
+            .map_err(|_| ())?
+            .first()
+            .map(|v| *v)
+            .ok_or(())?;
+        let server_name = ServerName::IpAddress(rustls::pki_types::IpAddr::from(addr));
+        let stream = mio::net::TcpStream::connect(SocketAddr::new(addr, 443)).map_err(|_| ())?;
+        let tls =
+            rustls::ClientConnection::new(self.tls_config.clone(), server_name).map_err(|_| ())?;
+        let client = HttpClient {
+            stream,
+            connection_id,
+            event,
+            tls,
+        };
+        let client_id = self.http_clients.insert(client);
+        let connection = self.get_connection_mut(connection_id);
+        connection.related_http_client_id = Some(unsafe { NonMaxUsize::new_unchecked(client_id) });
+        let client = unsafe { self.http_clients.get_unchecked_mut(client_id) };
+        mio::Registry::register(
+            &self.poll.registry(),
+            &mut client.stream,
+            mio::Token(client_id + Self::HTTP_CLIENT_ID_OFFSET),
+            Interest::READABLE | Interest::WRITABLE,
+        )
+        .unwrap();
+        self.on_http_client_connect(client_id)?;
+        Ok(())
+    }
+
+    fn on_http_client_connect(&mut self, client_id: usize) -> Result<(), ()> {
+        let client = unsafe { self.http_clients.get_unchecked_mut(client_id) };
+        println!("http client connect");
+        match &client.event {
+            HttpRequestEvent::Auth {
+                player_name,
+                server_id,
+            } => {
+                let mut payload = String::new();
+                ufmt::uwrite!(payload, "GET /session/minecraft/hasJoined?username={}&serverId={} HTTP/1.1\r\nHost: sessionserver.mojang.com\r\nConnection: close\r\nAccept-Encoding: identity\r\n\r\n", player_name, server_id)
+                    .unwrap();
+
+                println!("payload: {}", payload);
+                client
+                    .tls
+                    .writer()
+                    .write_all(payload.as_bytes())
+                    .map_err(|_| ())?;
+            }
+        }
+        Ok(())
+    }
+
+    fn on_http_client_read(&mut self, client_id: usize) -> Result<(), ()> {
+        let mut buf = Buffer::<4000>::new();
+        let client = unsafe { self.http_clients.get_unchecked_mut(client_id) };
+        client.tls.read_tls(&mut client.stream).map_err(|_| ())?;
+        if client.tls.wants_write() {
+            client.tls.write_tls(&mut client.stream).map_err(|_| ())?;
+        }
+        // client.stream.read_to_buf(&mut buf)?;
+        // println!(
+        //     "read: {}",
+        //     std::str::from_utf8(buf.read(buf.remaining())).unwrap()
+        // );
+        Ok(())
+    }
+
+    fn on_read_http_response(&mut self, client_id: usize, buf: Vec<u8>) -> Result<(), ()> {
+        let client = unsafe { self.http_clients.get_unchecked_mut(client_id) };
+        println!("HIHIHI");
+
+        let connection_id = client.connection_id;
+        match &client.event {
+            HttpRequestEvent::Auth {
+                player_name,
+                server_id,
+            } => {
+                let connection =
+                    unsafe { self.connections.get_unchecked_mut(client.connection_id) };
+                let uuid = connection.uuid;
+                let player_name = connection.player_name.clone();
+                println!("read: {}", String::from_utf8(buf).unwrap());
+                println!("LoginSuccess");
+                self.send_packet(
+                    connection_id,
+                    &LoginSuccessS2c {
+                        uuid,
+                        username: player_name,
+                        properties: Vec::new(),
+                    }
+                    .into(),
+                )?;
+            }
+        };
+        self.close_http_client(client_id);
+        Ok(())
+    }
+
+    fn close_http_client(&mut self, client_id: usize) -> HttpClient {
+        println!("http client closed");
+        let mut client = self.http_clients.remove(client_id);
+        let connection = self.get_connection_mut(client.connection_id);
+        connection.related_http_client_id = None;
+        self.close_connection(client.connection_id);
+        mio::Registry::deregister(&self.poll.registry(), &mut client.stream).unwrap();
+        client
     }
 
     fn on_connection_read(&mut self, connection_id: ConnectionId) -> Result<(), ()> {
@@ -287,7 +419,7 @@ impl Server {
         };
     }
 
-    pub fn close_connection(&mut self, connection_id: ConnectionId) {
+    fn close_connection(&mut self, connection_id: ConnectionId) {
         let connection = unsafe { self.connections.get_unchecked_mut(connection_id as usize) };
         if let Some(client_id) = connection.related_http_client_id {
             self.http_clients.remove(client_id.get());
