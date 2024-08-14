@@ -1146,7 +1146,7 @@ dependencies = [
 
 [[package]]
 name = "packetize"
-version = "0.79.0"
+version = "0.80.0"
 dependencies = [
  "arrayvec",
  "fastbuf",
@@ -1159,7 +1159,7 @@ dependencies = [
 
 [[package]]
 name = "packetize_derive"
-version = "0.79.0"
+version = "0.80.0"
 dependencies = [
  "proc-macro2",
  "quote",

@@ -72,25 +72,6 @@ pub fn handle_encryption_response(
         },
     )?;
 
-    send_login_success_packet(server, connection_id)?;
-
-    Ok(())
-}
-
-fn send_login_success_packet(server: &mut Server, connection_id: ConnectionId) -> Result<(), ()> {
-    let connection = server.get_connection_mut(connection_id);
-    let uuid = connection.uuid;
-    let username = connection.player_name.clone();
-    server.send_packet(
-        connection_id,
-        &LoginSuccessS2c {
-            uuid,
-            username,
-            properties: Vec::new(),
-        }
-        .into(),
-    )?;
-    server.flush_write_buffer(connection_id);
     Ok(())
 }
 
