@@ -1,3 +1,4 @@
+pub mod authentication;
 pub mod disconnect;
 pub mod encryption_request;
 pub mod encryption_response;

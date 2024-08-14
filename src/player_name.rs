@@ -15,7 +15,7 @@ use crate::var_string::VarString;
     derive_more::Deref,
     derive_more::DerefMut,
 )]
-pub struct PlayerName(VarString<16>);
+pub struct PlayerName(pub VarString<16>);
 
 impl PlayerName {
     pub fn new() -> Self {

@@ -7,7 +7,7 @@ use sha1::{Digest, Sha1};
 use crate::{
     http_request::HttpRequestEvent,
     net::{
-        mc1_21_1::packet::login_success::LoginSuccessS2c,
+        mc1_21_1::packet::{authentication::authenticate, login_success::LoginSuccessS2c},
         server::{ConnectionId, Server},
     },
 };
@@ -57,7 +57,9 @@ pub fn handle_encryption_response(
     let connection = server.get_connection_mut(connection_id);
     let player_name = connection.player_name.to_string();
 
-    // auth
+    // Check if player are not banned
+    // Unpack textures
+    // Compression
 
     server.connect_http_request_client(
         connection_id,
