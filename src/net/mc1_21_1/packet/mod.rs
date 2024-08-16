@@ -12,3 +12,4 @@ pub mod ping;
 pub mod plugin_message;
 pub mod set_compression;
 pub mod status;
+pub mod feature_flags;

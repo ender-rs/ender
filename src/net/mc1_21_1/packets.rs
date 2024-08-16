@@ -7,6 +7,7 @@ use super::packet::{
     disconnect::LoginDisconnectS2c,
     encryption_request::EncryptionRequestS2c,
     encryption_response::{handle_encryption_response, EncryptionResponseC2s},
+    feature_flags::FeatureFlagsS2c,
     finish_configuration::{
         handle_finish_configuration_ack, FinishConfigurationAckC2s, FinishConfigurationS2c,
     },
@@ -53,6 +54,7 @@ pub enum Mc1_21_1ConnectionState {
         #[change_state_to(Play)]
         #[id(0x03)]
         FinishConfigurationAckC2s,
+        #[id(0x0C)] FeatureFlagsS2c,
     ),
     Play(
         #[id(0x19)] PluginMessagePlayS2c,
