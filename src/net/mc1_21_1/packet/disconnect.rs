@@ -16,4 +16,5 @@ pub fn handle_disconnect(
     connection_id: ConnectionId,
     disconnect: &Disconnect,
 ) {
+    dbg!(disconnect);
 }

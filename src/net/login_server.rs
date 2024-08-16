@@ -10,7 +10,7 @@ use cfb8::{Decryptor, Encryptor};
 use fastbuf::{Buf, Buffer, ReadBuf, ReadToBuf, WriteBuf};
 use mio::{event::Event, Interest};
 use nonmax::{NonMaxI32, NonMaxUsize};
-use packetize::{ClientBoundPacketStream, ServerBoundPacketStream};
+use packetize::ClientBoundPacketStream;
 use rand::thread_rng;
 use rsa::{
     signature::digest::generic_array::GenericArray, traits::PublicKeyParts, RsaPrivateKey,
@@ -21,28 +21,13 @@ use tick_machine::{Tick, TickState};
 use uuid::Uuid;
 
 use crate::{
-    net::{
-        http_server::make_tls_config,
-        mc1_21_1::packet::{
-            finish_configuration::handle_finish_configuration_ack, handshake::handle_handshake,
-            login_start::handle_login_start, plugin_message::handle_plugin_message,
-            status::handle_status_request,
-        },
-    },
-    packet_format::MinecraftPacketFormat,
-    player_name::PlayerName,
-    var_string::VarString,
+    net::http_server::make_tls_config, packet_format::MinecraftPacketFormat,
+    player_name::PlayerName, var_string::VarString,
 };
 
 use super::{
     http_server::HttpClient,
-    mc1_21_1::{
-        packet::{
-            encryption_response::handle_encryption_response, login_ack::handle_login_ack,
-            ping::handle_ping_request,
-        },
-        packets::{ClientBoundPacket, Mc1_21_1ConnectionState, ServerBoundPacket},
-    },
+    mc1_21_1::packets::{ClientBoundPacket, Mc1_21_1ConnectionState},
 };
 
 pub const PACKET_BYTE_BUFFER_LENGTH: usize = 4096;
@@ -208,7 +193,6 @@ impl LoginServer {
         let connection = unsafe { self.connections.get_unchecked_mut(connection_id) };
 
         if let Some(ref mut cipher) = &mut connection.d_cipher {
-            println!("encryption read");
             #[allow(invalid_value)]
             let mut buf =
                 unsafe { MaybeUninit::<[u8; PACKET_BYTE_BUFFER_LENGTH]>::uninit().assume_init() };
@@ -228,43 +212,8 @@ impl LoginServer {
     }
 
     fn on_read_packet(&mut self, connection_id: ConnectionId) -> Result<(), ()> {
-        //println!("{:?}", self.get_connection_mut(connection_id).read_buf);
         while self.get_connection_mut(connection_id).read_buf.remaining() != 0 {
-            let connection = unsafe { self.connections.get_unchecked_mut(connection_id) };
-            let buf = &mut *connection.read_buf;
-
-            match connection
-                .state
-                .decode_server_bound_packet(buf, &mut connection.packet_stream)?
-            {
-                ServerBoundPacket::HandShakeC2s(handshake) => {
-                    handle_handshake(self, connection_id, &handshake)
-                }
-                ServerBoundPacket::LoginStartC2s(login_start) => {
-                    handle_login_start(self, connection_id, &login_start)
-                }
-                ServerBoundPacket::StatusRequestC2s(status_request) => {
-                    handle_status_request(self, connection_id, &status_request)
-                }
-                ServerBoundPacket::PingRequestC2s(ping_request) => {
-                    handle_ping_request(self, connection_id, &ping_request)
-                }
-                ServerBoundPacket::EncryptionResponseC2s(encryption_response) => {
-                    handle_encryption_response(self, connection_id, &encryption_response)
-                }
-                ServerBoundPacket::LoginAckC2s(login_ack) => {
-                    handle_login_ack(self, connection_id, &login_ack)
-                }
-                ServerBoundPacket::PluginMessageConfC2s(plugin_message) => {
-                    handle_plugin_message(self, connection_id, &plugin_message)
-                }
-                ServerBoundPacket::FinishConfigurationAckC2s(finish_conf_ack) => {
-                    handle_finish_configuration_ack(self, connection_id, &finish_conf_ack)
-                }
-                ServerBoundPacket::PluginMessagePlayC2s(plugin_message) => {
-                    handle_plugin_message(self, connection_id, &plugin_message)
-                }
-            }?;
+            super::mc1_21_1::packets::handle_packet(self, connection_id)?;
         }
         let connection = unsafe { self.connections.get_unchecked_mut(connection_id) };
         let buf = &mut *connection.read_buf;

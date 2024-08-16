@@ -1,7 +1,4 @@
-use std::{
-    mem::{transmute, transmute_copy},
-    str::FromStr,
-};
+use std::{mem::transmute_copy, str::FromStr};
 
 use fastbuf::{ReadBuf, WriteBuf};
 use packetize::{Decode, Encode};

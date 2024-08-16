@@ -40,7 +40,8 @@ impl PacketStreamFormat for MinecraftPacketFormat {
                 unsafe { buf.set_filled_pos(buf.pos() + payload_len) };
                 assert_eq!(buf.remaining(), payload_len);
             } else {
-                todo!("actual compressoin over the threshold is not implemented yet");
+                println!("actual compressoin over the threshold is not implemented yet");
+                return Err(());
             }
             //let compressed_len = packet_len as usize - buf.pos() - pos_backup;
         } else {
@@ -73,7 +74,8 @@ impl PacketStreamFormat for MinecraftPacketFormat {
                 VarInt::from(buffer.remaining() as i32).encode(buf)?;
                 buf.try_write(buffer.read(buffer.remaining()))?;
             } else {
-                todo!("actual decompression over the threshold is not implemented yet");
+                println!("actual decompression over the threshold is not implemented yet");
+                return Err(());
             }
         } else {
             unsafe { buffer.set_pos(1) };

@@ -80,7 +80,7 @@ fn send_set_compression_packet(
     server: &mut LoginServer,
     connection_id: ConnectionId,
 ) -> Result<(), ()> {
-    const DEFAULT_COMPRESSION_THRESHOLD: i32 = 2560;
+    const DEFAULT_COMPRESSION_THRESHOLD: i32 = 256000;
     server.send_packet(
         connection_id,
         &SetCompressionS2c {

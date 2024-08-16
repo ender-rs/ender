@@ -28,22 +28,3 @@ pub struct GameProfile {
     #[serde(rename = "profileActions")]
     pub profile_actions: Option<Vec<ProfileAction>>,
 }
-
-pub fn authenticate(
-    username: &str,
-    server_hash: &str,
-    ip: &SocketAddr,
-    server: &mut LoginServer,
-) -> Result<GameProfile, ()> {
-    let address = format!("https://sessionserver.mojang.com/session/minecraft/hasJoined?username={username}&serverId={server_hash}&ip={ip}");
-    // let response = server.reqwest_client.get(address).send().unwrap();
-
-    // match response.status() {
-    //     StatusCode::OK => {}
-    //     StatusCode::NO_CONTENT => Err("no content").unwrap(),
-    //     _ => Err("other").unwrap(),
-    // }
-    // let profile: GameProfile = response.json().unwrap();
-    //Ok(profile)
-    todo!()
-}
