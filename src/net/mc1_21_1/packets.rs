@@ -1,7 +1,5 @@
 use packetize::streaming_packets;
 
-use crate::packet_format::MinecraftPacketFormat;
-
 use super::packet::{
     disconnect::LoginDisconnectS2c,
     encryption_request::EncryptionRequestS2c,
@@ -19,7 +17,7 @@ use super::packet::{
     status::{StatusRequestC2s, StatusResponseS2c},
 };
 
-#[streaming_packets(MinecraftPacketFormat)]
+#[streaming_packets]
 #[derive(Debug, Default)]
 pub enum Mc1_21_1ConnectionState {
     #[default]

@@ -6,7 +6,7 @@ use std::{
 };
 
 use httparse::{Response, EMPTY_HEADER};
-use mio::{event::Event, net::TcpStream, Interest};
+use mio::{event::Event, net::TcpStream, Interest, Token};
 use nonmax::NonMaxUsize;
 use rustls::{
     crypto::{aws_lc_rs, CryptoProvider},
@@ -33,6 +33,7 @@ pub enum HttpRequestEvent {
 }
 
 impl LoginServer {
+    pub const HTTP_CLIENT_ID_OFFSET: usize = Self::CONNECTIONS_CAPACITY;
     pub fn on_http_client_event(
         &mut self,
         client_id: usize,
@@ -84,6 +85,7 @@ impl LoginServer {
     }
 
     fn on_http_client_connect(&mut self, client_id: usize) -> Result<(), ()> {
+        println!("client id is {client_id}");
         let client = unsafe { self.http_clients.get_unchecked_mut(client_id) };
         match &client.event {
             HttpRequestEvent::Auth {
@@ -114,6 +116,14 @@ impl LoginServer {
         if io_state.tls_bytes_to_write() != 0 {
             client.tls.write_tls(&mut client.stream).map_err(|_| ())?;
         }
+        self.poll
+            .registry()
+            .reregister(
+                &mut client.stream,
+                Token(client_id + Self::HTTP_CLIENT_ID_OFFSET),
+                Interest::WRITABLE.add(Interest::READABLE),
+            )
+            .unwrap();
         let plaintext_read_length = io_state.plaintext_bytes_to_read();
         if plaintext_read_length != 0 {
             let mut buffer = vec![0u8; io_state.plaintext_bytes_to_read()];
@@ -152,21 +162,12 @@ impl LoginServer {
 
                 let game_profile: GameProfile =
                     simd_json::serde::from_reader(buf.as_slice()).map_err(|_| ())?;
-                println!(
-                    "{:?}",
-                    LoginSuccessS2c {
-                        uuid,
-                        username: player_name.clone(),
-                        properties: game_profile.properties.clone(),
-                        strict_error_handling: false
-                    }
-                );
                 self.send_packet(
                     connection_id,
                     &LoginSuccessS2c {
                         uuid,
                         username: player_name,
-                        properties: game_profile.properties,
+                        properties: Vec::new(),
                         strict_error_handling: false,
                     }
                     .into(),
@@ -180,7 +181,6 @@ impl LoginServer {
     pub fn close_http_client(&mut self, client_id: usize) -> HttpClient {
         let mut client = self.http_clients.remove(client_id);
         mio::Registry::deregister(&self.poll.registry(), &mut client.stream).unwrap();
-        let _result = client.stream.shutdown(std::net::Shutdown::Both);
         let connection = self.connections.get_mut(client.connection_id);
         if let Some(connection) = connection {
             connection.related_http_client_id = None;

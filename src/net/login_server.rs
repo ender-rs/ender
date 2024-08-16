@@ -1,7 +1,6 @@
 use std::{
-    io::{Read, Write},
+    io::{self, Read},
     mem::MaybeUninit,
-    num::NonZeroI32,
     sync::Arc,
     time::Duration,
 };
@@ -10,8 +9,8 @@ use aes::cipher::{generic_array, BlockDecryptMut, BlockEncryptMut, BlockSizeUser
 use cfb8::{Decryptor, Encryptor};
 use fastbuf::{Buf, Buffer, ReadBuf, ReadToBuf, WriteBuf};
 use mio::{event::Event, Interest};
-use nonmax::NonMaxUsize;
-use packetize::{ClientBoundPacketStream, Decode, ServerBoundPacketStream};
+use nonmax::{NonMaxI32, NonMaxUsize};
+use packetize::{ClientBoundPacketStream, ServerBoundPacketStream};
 use rand::thread_rng;
 use rsa::{
     signature::digest::generic_array::GenericArray, traits::PublicKeyParts, RsaPrivateKey,
@@ -30,8 +29,8 @@ use crate::{
             status::handle_status_request,
         },
     },
+    packet_format::MinecraftPacketFormat,
     player_name::PlayerName,
-    var_int::VarInt,
     var_string::VarString,
 };
 
@@ -67,11 +66,11 @@ pub struct Connection {
     pub read_buf: Box<Buffer<PACKET_BYTE_BUFFER_LENGTH>>,
     pub write_buf: Box<Buffer<PACKET_BYTE_BUFFER_LENGTH>>,
     pub state: Mc1_21_1ConnectionState,
+    pub packet_stream: MinecraftPacketFormat,
     pub stream: mio::net::TcpStream,
     pub encrypt_key: Option<Vec<u8>>,
     pub e_cipher: Option<Encryptor<aes::Aes128>>,
     pub d_cipher: Option<Decryptor<aes::Aes128>>,
-    pub compression_threshold: Option<NonZeroI32>,
     pub verify_token: MaybeUninit<[u8; 4]>,
     pub related_http_client_id: Option<NonMaxUsize>,
 }
@@ -88,9 +87,9 @@ impl Connection {
             e_cipher: None,
             d_cipher: None,
             encrypt_key: None,
-            compression_threshold: None,
             verify_token: MaybeUninit::uninit(),
             related_http_client_id: None,
+            packet_stream: MinecraftPacketFormat::new(),
         }
     }
 }
@@ -99,9 +98,8 @@ pub type ConnectionId = usize;
 
 impl LoginServer {
     const LISTENER_KEY: usize = usize::MAX;
-    const CONNECTIONS_CAPACITY: usize = 1000;
+    pub const CONNECTIONS_CAPACITY: usize = 1000;
     const HTTP_REQUESTS_CAPACITY: usize = 30;
-    pub const HTTP_CLIENT_ID_OFFSET: usize = Self::CONNECTIONS_CAPACITY;
     const TICK: Duration = Duration::from_millis(50);
     const PORT: u16 = 25565;
 
@@ -140,34 +138,6 @@ impl LoginServer {
             http_clients: Slab::with_capacity(Self::HTTP_REQUESTS_CAPACITY),
             tls_config,
         }
-    }
-
-    pub fn enable_encryption(
-        &mut self,
-        shared_secret: &[u8],
-        connection_id: ConnectionId,
-    ) -> Result<(), ()> {
-        let crypt_key: [u8; 16] = shared_secret.try_into().unwrap();
-        let connection = self.get_connection_mut(connection_id);
-
-        connection.e_cipher =
-            Some(Encryptor::<aes::Aes128>::new_from_slices(&crypt_key, &crypt_key).unwrap());
-        connection.d_cipher =
-            Some(Decryptor::<aes::Aes128>::new_from_slices(&crypt_key, &crypt_key).unwrap());
-
-        connection.encrypt_key = Some(crypt_key.to_vec());
-
-        Ok(())
-    }
-
-    pub fn enable_compression(
-        &mut self,
-        connection_id: ConnectionId,
-        threshold: i32,
-    ) -> Result<(), ()> {
-        let connection = self.get_connection_mut(connection_id);
-        connection.compression_threshold = Some(unsafe { NonZeroI32::new_unchecked(threshold) });
-        Ok(())
     }
 
     pub fn get_connection_mut(&mut self, connection_id: ConnectionId) -> &mut Connection {
@@ -211,7 +181,7 @@ impl LoginServer {
                 Interest::READABLE,
             )
             .unwrap();
-        } else if selection_key < Self::CONNECTIONS_CAPACITY {
+        } else if selection_key < Self::HTTP_CLIENT_ID_OFFSET {
             if !self.connections.contains(selection_key) {
                 return;
             }
@@ -236,53 +206,37 @@ impl LoginServer {
 
     fn on_connection_read(&mut self, connection_id: ConnectionId) -> Result<(), ()> {
         let connection = unsafe { self.connections.get_unchecked_mut(connection_id) };
-        #[allow(invalid_value)]
-        let mut buf =
-            unsafe { MaybeUninit::<[u8; PACKET_BYTE_BUFFER_LENGTH]>::uninit().assume_init() };
-        let read_length = connection.stream.read(&mut buf).map_err(|_| ())?;
 
         if let Some(ref mut cipher) = &mut connection.d_cipher {
+            println!("encryption read");
+            #[allow(invalid_value)]
+            let mut buf =
+                unsafe { MaybeUninit::<[u8; PACKET_BYTE_BUFFER_LENGTH]>::uninit().assume_init() };
+            let read_length = connection.stream.read(&mut buf).map_err(|_| ())?;
+            if read_length == 0 {
+                return Err(());
+            }
+
             let buf = &mut buf[..read_length];
             LoginServer::decrypt_bytes(cipher, buf);
             connection.read_buf.try_write(buf)?;
         } else {
-            self.decompress_read(connection_id, &mut buf)?;
+            connection.stream.read_to_buf(&mut connection.read_buf)?;
         }
         self.on_read_packet(connection_id as ConnectionId)?;
-        Ok(())
-    }
-
-    fn decompress_read(&mut self, connection_id: ConnectionId, buf: &[u8]) -> Result<(), ()> {
-        let connection = unsafe { self.connections.get_unchecked_mut(connection_id) };
-        if let Some(compression_threshold) = connection.compression_threshold {
-            let compression_threshold = compression_threshold.get() as usize;
-            //TODO create non advancing read fastvarint
-            let packet_length = *VarInt::decode(buf)? as usize;
-            if compression_threshold <= packet_length {
-                let remaining_backup = buf.remaining();
-                let _uncompressed_length = *VarInt::decode(buf)? as usize;
-                let compressed_payload_length = packet_length - remaining_backup - buf.remaining();
-                let compressed_payload = buf.read(compressed_payload_length);
-                //TODO check if read_to_end is better work
-                flate2::read::ZlibDecoder::new(compressed_payload)
-                    .read_to_buf(&mut connection.read_buf)?;
-            } else {
-                connection.read_buf.try_write(buf.read(buf.remaining()))?;
-            }
-        } else {
-            connection.read_buf.try_write(buf.read(buf.remaining()))?;
-        }
-
         Ok(())
     }
 
     fn on_read_packet(&mut self, connection_id: ConnectionId) -> Result<(), ()> {
         //println!("{:?}", self.get_connection_mut(connection_id).read_buf);
         while self.get_connection_mut(connection_id).read_buf.remaining() != 0 {
-            let connection = unsafe { self.connections.get_unchecked_mut(connection_id as usize) };
+            let connection = unsafe { self.connections.get_unchecked_mut(connection_id) };
             let buf = &mut *connection.read_buf;
 
-            match connection.state.decode_server_bound_packet(buf)? {
+            match connection
+                .state
+                .decode_server_bound_packet(buf, &mut connection.packet_stream)?
+            {
                 ServerBoundPacket::HandShakeC2s(handshake) => {
                     handle_handshake(self, connection_id, &handshake)
                 }
@@ -312,6 +266,9 @@ impl LoginServer {
                 }
             }?;
         }
+        let connection = unsafe { self.connections.get_unchecked_mut(connection_id) };
+        let buf = &mut *connection.read_buf;
+        buf.clear();
         Ok(())
     }
 
@@ -322,8 +279,9 @@ impl LoginServer {
     ) -> Result<(), ()> {
         let connection = self.get_connection_mut(connection_id);
         let buf = &mut *connection.write_buf;
-        connection.state.encode_client_bound_packet(packet, buf)?;
-
+        connection
+            .state
+            .encode_client_bound_packet(packet, buf, &mut connection.packet_stream)?;
         Ok(())
     }
 
@@ -337,7 +295,7 @@ impl LoginServer {
             buf.write(&encrypted_buf);
         }
 
-        match connection.stream.write_all(buf.read(buf.remaining())) {
+        match io::Write::write_all(&mut connection.stream, buf.read(buf.remaining())) {
             Ok(()) => {}
             Err(_) => self.close_connection(connection_id),
         };
@@ -347,11 +305,9 @@ impl LoginServer {
         let connection = unsafe { self.connections.get_unchecked_mut(connection_id as usize) };
         if let Some(client_id) = connection.related_http_client_id {
             let mut client = self.http_clients.remove(client_id.get());
-            let _result = client.stream.shutdown(std::net::Shutdown::Both);
             mio::Registry::deregister(&self.poll.registry(), &mut client.stream).unwrap();
         }
         mio::Registry::deregister(&self.poll.registry(), &mut connection.stream).unwrap();
-        let _result = connection.stream.shutdown(std::net::Shutdown::Both);
         self.connections.remove(connection_id);
     }
 
@@ -376,6 +332,39 @@ impl LoginServer {
             let gen_arr = GenericArray::from_mut_slice(chunk);
             cipher.decrypt_block_mut(gen_arr);
         }
+    }
+
+    pub fn enable_encryption(
+        &mut self,
+        shared_secret: &[u8],
+        connection_id: ConnectionId,
+    ) -> Result<(), ()> {
+        let crypt_key: [u8; 16] = shared_secret.try_into().unwrap();
+        let connection = self.get_connection_mut(connection_id);
+
+        connection.e_cipher =
+            Some(Encryptor::<aes::Aes128>::new_from_slices(&crypt_key, &crypt_key).unwrap());
+        connection.d_cipher =
+            Some(Decryptor::<aes::Aes128>::new_from_slices(&crypt_key, &crypt_key).unwrap());
+
+        connection.encrypt_key = Some(crypt_key.to_vec());
+
+        Ok(())
+    }
+
+    pub fn enable_compression(
+        &mut self,
+        connection_id: ConnectionId,
+        threshold: i32,
+    ) -> Result<(), ()> {
+        let connection = self.get_connection_mut(connection_id);
+        if threshold == -1 {
+            connection.packet_stream.compression_threshold = None;
+        } else {
+            connection.packet_stream.compression_threshold =
+                Some(unsafe { NonMaxI32::new_unchecked(threshold) });
+        }
+        Ok(())
     }
 }
 

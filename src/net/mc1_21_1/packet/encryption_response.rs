@@ -56,7 +56,6 @@ pub fn handle_encryption_response(
     // Check if player are not banned
     // Unpack textures
     // Compression
-    send_set_compression_packet(server, connection_id)?;
 
     server.connect_http_request_client(
         connection_id,
@@ -66,22 +65,5 @@ pub fn handle_encryption_response(
         },
     )?;
 
-    Ok(())
-}
-
-fn send_set_compression_packet(
-    server: &mut LoginServer,
-    connection_id: ConnectionId,
-) -> Result<(), ()> {
-    const DEFAULT_COMPRESSION_THRESHOLD: i32 = 256;
-    server.send_packet(
-        connection_id,
-        &SetCompressionS2c {
-            threshold: DEFAULT_COMPRESSION_THRESHOLD.into(),
-        }
-        .into(),
-    )?;
-    server.flush_write_buffer(connection_id);
-    server.enable_compression(connection_id, DEFAULT_COMPRESSION_THRESHOLD)?;
     Ok(())
 }

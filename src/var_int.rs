@@ -61,7 +61,7 @@ impl Encode for VarInt {
 
 impl Decode for VarInt {
     fn decode(buf: &mut impl ReadBuf) -> Result<Self, ()> {
-        let (len, read_len) = <i32 as fastvarint::VarInt>::decode_var(buf)?;
+        let (len, read_len) = <i32 as fastvarint::VarInt>::decode_var_from_buf(buf)?;
         buf.advance(read_len);
         Ok(VarInt(len))
     }

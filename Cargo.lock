@@ -531,7 +531,7 @@ dependencies = [
  "divan",
  "dns-lookup",
  "fastbuf",
- "fastvarint 0.5.0",
+ "fastvarint",
  "flate2",
  "get_if_addrs",
  "httparse",
@@ -571,9 +571,9 @@ dependencies = [
 
 [[package]]
 name = "fastbuf"
-version = "0.21.0"
+version = "0.23.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "263412426a20e9d7a915de441476508342e6bd0636c33d88f155a5617dc72e65"
+checksum = "db49844afa6d995e8faf4ee6ebe730c495587e581d6aa16e149b5207beed9857"
 dependencies = [
  "varuint",
 ]
@@ -586,18 +586,9 @@ checksum = "9fc0510504f03c51ada170672ac806f1f105a88aa97a5281117e1ddc3368e51a"
 
 [[package]]
 name = "fastvarint"
-version = "0.4.0"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0149a1142d6e8ed350af392a1aa6b4c5308bda138b3e9b604a920ed5b7f6b535"
-dependencies = [
- "fastbuf",
-]
-
-[[package]]
-name = "fastvarint"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b115982757b925fdc315df475a09f0bc52b0a6062350dd6aba66939a2d33fabc"
+checksum = "57a4acedba506dd3271f8809503ebeddc5937775c2e472f4a2942259b5d8d851"
 dependencies = [
  "fastbuf",
 ]
@@ -1155,11 +1146,11 @@ dependencies = [
 
 [[package]]
 name = "packetize"
-version = "0.82.0"
+version = "0.88.0"
 dependencies = [
  "arrayvec",
  "fastbuf",
- "fastvarint 0.4.0",
+ "fastvarint",
  "integer-encoding",
  "nonmax",
  "packetize_derive",
@@ -1168,7 +1159,7 @@ dependencies = [
 
 [[package]]
 name = "packetize_derive"
-version = "0.82.0"
+version = "0.88.0"
 dependencies = [
  "proc-macro2",
  "quote",

@@ -7,8 +7,10 @@ use uuid::Uuid;
 
 use crate::{
     net::{
-        mc1_21_1::packet::encryption_request::EncryptionRequestS2c,
         login_server::{ConnectionId, LoginServer},
+        mc1_21_1::packet::{
+            encryption_request::EncryptionRequestS2c, set_compression::SetCompressionS2c,
+        },
     },
     player_name::PlayerName,
     var_string::VarString,
@@ -54,6 +56,7 @@ pub fn handle_login_start(
         verify_token_array.set_len(verify_token.len());
     }
 
+    send_set_compression_packet(server, connection_id)?;
     server.send_packet(
         connection_id,
         &EncryptionRequestS2c {
@@ -70,5 +73,22 @@ pub fn handle_login_start(
     let connection = server.get_connection_mut(connection_id);
     connection.uuid = login_start.uuid;
     connection.player_name = login_start.name.clone();
+    Ok(())
+}
+
+fn send_set_compression_packet(
+    server: &mut LoginServer,
+    connection_id: ConnectionId,
+) -> Result<(), ()> {
+    const DEFAULT_COMPRESSION_THRESHOLD: i32 = 2560;
+    server.send_packet(
+        connection_id,
+        &SetCompressionS2c {
+            threshold: DEFAULT_COMPRESSION_THRESHOLD.into(),
+        }
+        .into(),
+    )?;
+    server.flush_write_buffer(connection_id);
+    server.enable_compression(connection_id, DEFAULT_COMPRESSION_THRESHOLD)?;
     Ok(())
 }

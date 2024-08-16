@@ -9,6 +9,7 @@ use crate::{
     net::login_server::{ConnectionId, LoginServer},
 };
 
+#[derive(Debug)]
 pub struct PluginMessage {
     channel: Identifier,
     data: ArrayVec<u8, 32767>,
@@ -25,16 +26,6 @@ pub struct PluginMessageConfS2c(pub PluginMessage);
 
 #[derive(Deref, DerefMut, Encode, Decode, Debug)]
 pub struct PluginMessagePlayS2c(pub PluginMessage);
-
-impl Debug for PluginMessage {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let len = min(self.data.len(), 10);
-        f.debug_struct("PluginMessage")
-            .field("channel", &self.channel)
-            .field(format!("data[..{len}]").as_str(), &&self.data[..len])
-            .finish()
-    }
-}
 
 impl Encode for PluginMessage {
     fn encode(&self, _buf: &mut impl fastbuf::WriteBuf) -> Result<(), ()> {

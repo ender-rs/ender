@@ -1,7 +1,7 @@
 use packetize::{Decode, Encode};
 use uuid::Uuid;
 
-use crate::{player_name::PlayerName, var_string::VarString};
+use crate::player_name::PlayerName;
 
 use super::authentication::Property;
 
