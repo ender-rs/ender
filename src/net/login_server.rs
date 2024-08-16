@@ -1,6 +1,8 @@
 use std::{
     io::{self, Read},
     mem::MaybeUninit,
+    net::IpAddr,
+    str::FromStr,
     sync::Arc,
     time::Duration,
 };
@@ -16,6 +18,7 @@ use rsa::{
     signature::digest::generic_array::GenericArray, traits::PublicKeyParts, RsaPrivateKey,
     RsaPublicKey,
 };
+use rustls::pki_types::ServerName;
 use slab::Slab;
 use tick_machine::{Tick, TickState};
 use uuid::Uuid;
@@ -42,6 +45,8 @@ pub struct LoginServer {
     pub private_key: RsaPrivateKey,
     pub public_key_der: Box<[u8]>,
     pub http_clients: Slab<HttpClient>,
+    pub session_server_ip: IpAddr,
+    pub session_server_name: ServerName<'static>,
     pub tls_config: Arc<rustls::ClientConfig>,
 }
 
@@ -112,6 +117,16 @@ impl LoginServer {
         )
         .unwrap();
 
+        let session_server_ip = dns_lookup::lookup_host("sessionserver.mojang.com")
+            .map_err(|_| ())
+            .unwrap()
+            .first()
+            .map(|v| *v)
+            .ok_or(())
+            .unwrap();
+        let session_server_name =
+            ServerName::try_from(String::from_str("sessionserver.mojang.com").unwrap()).unwrap();
+
         Self {
             poll,
             tick_state: TickState::new(Self::TICK),
@@ -122,6 +137,8 @@ impl LoginServer {
             public_key_der,
             http_clients: Slab::with_capacity(Self::HTTP_REQUESTS_CAPACITY),
             tls_config,
+            session_server_ip,
+            session_server_name,
         }
     }
 

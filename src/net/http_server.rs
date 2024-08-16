@@ -3,6 +3,7 @@ use std::{
     net::SocketAddr,
     str::FromStr,
     sync::Arc,
+    time::Instant,
 };
 
 use httparse::{Response, EMPTY_HEADER};
@@ -53,22 +54,22 @@ impl LoginServer {
         connection_id: ConnectionId,
         event: HttpRequestEvent,
     ) -> Result<(), ()> {
-        let addr = dns_lookup::lookup_host("sessionserver.mojang.com")
-            .map_err(|_| ())?
-            .first()
-            .map(|v| *v)
-            .ok_or(())?;
-        let server_name =
-            ServerName::try_from(String::from_str("sessionserver.mojang.com").unwrap()).unwrap();
-        let stream = mio::net::TcpStream::connect(SocketAddr::new(addr, 443)).map_err(|_| ())?;
-        let tls =
-            rustls::ClientConnection::new(self.tls_config.clone(), server_name).map_err(|_| ())?;
+        let start = Instant::now();
+        let stream = mio::net::TcpStream::connect(SocketAddr::new(self.session_server_ip, 443))
+            .map_err(|_| ())?;
+        println!("dns duration: {:?}", start.elapsed());
+        let tls = rustls::ClientConnection::new(
+            self.tls_config.clone(),
+            self.session_server_name.clone(),
+        )
+        .map_err(|_| ())?;
         let client = HttpClient {
             stream,
             connection_id,
             event,
             tls,
         };
+        println!("client connect duration: {:?}", start.elapsed());
         let client_id = self.http_clients.insert(client);
         let connection = self.get_connection_mut(connection_id);
         connection.related_http_client_id = Some(unsafe { NonMaxUsize::new_unchecked(client_id) });

@@ -1,7 +1,7 @@
 use arrayvec::ArrayVec;
 use packetize::{Decode, Encode};
 
-use crate::{var_int::VarInt, var_string::VarString};
+use crate::var_string::VarString;
 
 #[derive(Debug, Encode, Decode)]
 pub struct EncryptionRequestS2c {

@@ -9,8 +9,6 @@ use crate::net::{
     login_server::{ConnectionId, LoginServer},
 };
 
-use super::set_compression::SetCompressionS2c;
-
 #[derive(Debug, Encode, Decode)]
 pub struct EncryptionResponseC2s {
     pub shared_secret: ArrayVec<u8, 128>,
@@ -22,9 +20,6 @@ pub fn handle_encryption_response(
     connection_id: ConnectionId,
     encryption_response: &EncryptionResponseC2s,
 ) -> Result<(), ()> {
-    // #[cfg(debug_assertions)]
-    // println!("{encryption_response:?}");
-
     let connection = server.get_connection_mut(connection_id);
     let verify_token = unsafe { connection.verify_token.assume_init() };
 

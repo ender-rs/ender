@@ -1,7 +1,7 @@
 use packetize::{Decode, Encode};
 
 use crate::{
-    net::login_server::{Connection, ConnectionId, LoginServer},
+    net::login_server::{ConnectionId, LoginServer},
     var_string::VarString,
 };
 

@@ -1,9 +1,8 @@
 use packetize::{Decode, Encode};
 use serde::{Deserialize, Serialize};
-use std::net::SocketAddr;
 use uuid::Uuid;
 
-use crate::{net::login_server::LoginServer, var_string::VarString};
+use crate::var_string::VarString;
 
 #[derive(Serialize, Deserialize, Debug, Encode, Decode, Clone)]
 pub struct Property {
