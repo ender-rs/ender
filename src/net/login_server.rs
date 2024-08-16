@@ -4,7 +4,7 @@ use std::{
     net::IpAddr,
     str::FromStr,
     sync::Arc,
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 use aes::cipher::{generic_array, BlockDecryptMut, BlockEncryptMut, BlockSizeUser, KeyIvInit};
@@ -254,17 +254,20 @@ impl LoginServer {
     pub fn flush_write_buffer(&mut self, connection_id: ConnectionId) {
         let connection = self.get_connection_mut(connection_id);
         let buf = &mut *connection.write_buf;
-        if let Some(cipher) = &connection.e_cipher {
-            let mut encrypted_buf = bytes::BytesMut::from(buf.read(buf.remaining()));
-            Self::encryption(&mut encrypted_buf, cipher.clone());
-            buf.clear();
-            buf.write(&encrypted_buf);
+        if let Some(ref mut cipher) = &mut connection.e_cipher {
+            let pos = buf.pos();
+            let filled_pos = buf.filled_pos();
+            let encrypted_buf = unsafe { buf.to_slice_mut().get_unchecked_mut(pos..filled_pos) };
+            Self::encryption(encrypted_buf, cipher);
         }
 
         match io::Write::write_all(&mut connection.stream, buf.read(buf.remaining())) {
             Ok(()) => {}
             Err(_) => self.close_connection(connection_id),
         };
+        let connection = self.get_connection_mut(connection_id);
+        let buf = &mut *connection.write_buf;
+        buf.clear();
     }
 
     pub fn close_connection(&mut self, connection_id: ConnectionId) {
@@ -286,11 +289,13 @@ impl LoginServer {
         (pub_key, priv_key)
     }
 
-    fn encryption(buf: &mut bytes::BytesMut, mut cipher: cfb8::Encryptor<aes::Aes128>) {
+    fn encryption(buf: &mut [u8], cipher: &mut cfb8::Encryptor<aes::Aes128>) {
+        let start = Instant::now();
         for chunk in buf.chunks_mut(Encryptor::<aes::Aes128>::block_size()) {
             let gen_arr = generic_array::GenericArray::from_mut_slice(chunk);
             cipher.encrypt_block_mut(gen_arr);
         }
+        println!("aes encryption: {:?}", start.elapsed());
     }
 
     fn decrypt_bytes(cipher: &mut cfb8::Decryptor<aes::Aes128>, bytes: &mut [u8]) {

@@ -2,7 +2,6 @@ use std::{
     io::{BufReader, Read, Write},
     net::SocketAddr,
     sync::Arc,
-    time::Instant,
 };
 
 use httparse::{Response, EMPTY_HEADER};
