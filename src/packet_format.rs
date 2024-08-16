@@ -26,7 +26,6 @@ impl PacketStreamFormat for MinecraftPacketFormat {
         ID: Default,
     {
         if let Some(compression_threshold) = self.compression_threshold {
-            println!("{:?}", buf.get_continuous(buf.remaining()));
             let packet_len = *VarInt::decode(buf)?;
             let pos_backup = buf.pos();
             let uncompressed_len = *VarInt::decode(buf)?;
@@ -43,7 +42,6 @@ impl PacketStreamFormat for MinecraftPacketFormat {
                 println!("actual compressoin over the threshold is not implemented yet");
                 return Err(());
             }
-            //let compressed_len = packet_len as usize - buf.pos() - pos_backup;
         } else {
             let packet_len = *VarInt::decode(buf)?;
             if buf.remaining() < packet_len as usize {

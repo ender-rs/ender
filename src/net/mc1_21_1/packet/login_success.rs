@@ -3,7 +3,7 @@ use uuid::Uuid;
 
 use crate::player_name::PlayerName;
 
-use super::authentication::Property;
+use super::game_profile::Property;
 
 #[derive(Debug, Encode, Decode)]
 pub struct LoginSuccessS2c {

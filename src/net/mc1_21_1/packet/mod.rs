@@ -1,9 +1,9 @@
-pub mod authentication;
 pub mod client_information;
 pub mod disconnect;
 pub mod encryption_request;
 pub mod encryption_response;
 pub mod finish_configuration;
+pub mod game_profile;
 pub mod handshake;
 pub mod login_ack;
 pub mod login_start;

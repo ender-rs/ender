@@ -7,8 +7,8 @@ use uuid::Uuid;
 
 use crate::{
     net::{
-        protocol_version::ProtocolVersion,
         login_server::{ConnectionId, LoginServer},
+        protocol_version::ProtocolVersion,
     },
     player_name::PlayerName,
     var_string::VarString,
@@ -54,7 +54,6 @@ pub fn handle_status_request(
         .into(),
     )?;
     server.flush_write_buffer(connection_id);
-    println!("HI");
     Ok(())
 }
 
@@ -64,7 +63,7 @@ pub struct StatusResponseS2c {
 }
 
 impl Decode for StatusResponseS2c {
-    fn decode(buf: &mut impl fastbuf::ReadBuf) -> Result<Self, ()> {
+    fn decode(_buf: &mut impl fastbuf::ReadBuf) -> Result<Self, ()> {
         todo!()
     }
 }
@@ -73,7 +72,7 @@ impl Encode for StatusResponseS2c {
     fn encode(&self, buf: &mut impl fastbuf::WriteBuf) -> Result<(), ()> {
         let string = match simd_json::serde::to_string(&self.status) {
             Ok(v) => v,
-            Err(err) => Err(())?,
+            Err(_) => Err(())?,
         };
         dbg!(&string);
         VarString(ArrayString::<32767>::from_str(string.as_str()).map_err(|_| ())?).encode(buf)?;
@@ -113,12 +112,4 @@ pub struct Sample {
 pub struct Version {
     name: String,
     protocol: ProtocolVersion,
-}
-
-pub fn handle_status_response(
-    server: &mut LoginServer,
-    connection_id: ConnectionId,
-    status_response: StatusResponseS2c,
-) {
-    dbg!(status_response);
 }

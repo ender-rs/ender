@@ -1,3 +1,4 @@
+use bitflags::{bitflags, Flags};
 use packetize::{Decode, Encode};
 
 use crate::{
@@ -11,10 +12,36 @@ pub struct ClientInformationC2s {
     view_distance: u8,
     chat_mode: ChatMode,
     chat_colors: bool,
-    display_skin_parts: u8,
+    display_skin_parts: DisplaySkinParts,
     main_hand: MainHand,
     enable_text_filtering: bool,
     allow_server_listings: bool,
+}
+
+bitflags! {
+    #[derive(Debug)]
+    pub struct DisplaySkinParts: u8 {
+        const Cape = 0x01;
+        const Jacket = 0x02;
+        const LeftSleeve = 0x04;
+        const RightSleeve = 0x08;
+        const LeftPantsLeg = 0x10;
+        const RightPantsLeg = 0x20;
+        const Hat = 0x40;
+        const _Unused = 0x80;
+    }
+}
+
+impl Encode for DisplaySkinParts {
+    fn encode(&self, buf: &mut impl fastbuf::WriteBuf) -> Result<(), ()> {
+        self.bits().encode(buf)
+    }
+}
+
+impl Decode for DisplaySkinParts {
+    fn decode(buf: &mut impl fastbuf::ReadBuf) -> Result<Self, ()> {
+        Ok(DisplaySkinParts::from_bits(u8::decode(buf)?).ok_or(())?)
+    }
 }
 
 #[derive(Debug, Encode, Decode)]

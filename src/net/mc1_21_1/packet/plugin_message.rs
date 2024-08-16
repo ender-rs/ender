@@ -11,8 +11,8 @@ use crate::{
 
 #[derive(Debug)]
 pub struct PluginMessage {
-    channel: Identifier,
-    data: ArrayVec<u8, 32767>,
+    pub channel: Identifier,
+    pub data: ArrayVec<u8, 32767>,
 }
 
 #[derive(Deref, DerefMut, Encode, Decode, Debug)]

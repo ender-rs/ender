@@ -1,7 +1,6 @@
 use std::{
     io::{BufReader, Read, Write},
     net::SocketAddr,
-    str::FromStr,
     sync::Arc,
     time::Instant,
 };
@@ -11,11 +10,11 @@ use mio::{event::Event, net::TcpStream, Interest, Token};
 use nonmax::NonMaxUsize;
 use rustls::{
     crypto::{aws_lc_rs, CryptoProvider},
-    pki_types::{CertificateDer, PrivateKeyDer, ServerName},
+    pki_types::{CertificateDer, PrivateKeyDer},
     RootCertStore,
 };
 
-use crate::net::mc1_21_1::packet::{authentication::GameProfile, login_success::LoginSuccessS2c};
+use crate::net::mc1_21_1::packet::{game_profile::GameProfile, login_success::LoginSuccessS2c};
 
 use super::login_server::{ConnectionId, LoginServer};
 
@@ -54,10 +53,8 @@ impl LoginServer {
         connection_id: ConnectionId,
         event: HttpRequestEvent,
     ) -> Result<(), ()> {
-        let start = Instant::now();
         let stream = mio::net::TcpStream::connect(SocketAddr::new(self.session_server_ip, 443))
             .map_err(|_| ())?;
-        println!("dns duration: {:?}", start.elapsed());
         let tls = rustls::ClientConnection::new(
             self.tls_config.clone(),
             self.session_server_name.clone(),
@@ -69,7 +66,6 @@ impl LoginServer {
             event,
             tls,
         };
-        println!("client connect duration: {:?}", start.elapsed());
         let client_id = self.http_clients.insert(client);
         let connection = self.get_connection_mut(connection_id);
         connection.related_http_client_id = Some(unsafe { NonMaxUsize::new_unchecked(client_id) });
@@ -86,7 +82,6 @@ impl LoginServer {
     }
 
     fn on_http_client_connect(&mut self, client_id: usize) -> Result<(), ()> {
-        println!("client id is {client_id}");
         let client = unsafe { self.http_clients.get_unchecked_mut(client_id) };
         match &client.event {
             HttpRequestEvent::Auth {
