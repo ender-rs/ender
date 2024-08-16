@@ -1,3 +1,0 @@
-[submodule "packetize"]
-	path = packetize
-	url = https://github.com/ender-rs/packetize
