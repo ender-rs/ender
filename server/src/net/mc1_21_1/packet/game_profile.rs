@@ -2,7 +2,7 @@ use packetize::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::var_string::VarString;
+use crate::{player_name::PlayerName, var_string::VarString};
 
 #[derive(Serialize, Deserialize, Debug, Encode, Decode, Clone)]
 pub struct Property {
@@ -22,8 +22,19 @@ pub enum ProfileAction {
 #[derive(Deserialize, Debug, Clone)]
 pub struct GameProfile {
     pub id: Uuid,
-    pub name: String,
+    pub name: PlayerName,
     pub properties: Vec<Property>,
     #[serde(rename = "profileActions")]
     pub profile_actions: Option<Vec<ProfileAction>>,
+}
+
+impl Default for GameProfile {
+    fn default() -> Self {
+        Self {
+            id: Uuid::nil(),
+            name: VarString::from_str("Unknown Player").unwrap().into(),
+            properties: Vec::new(),
+            profile_actions: None,
+        }
+    }
 }

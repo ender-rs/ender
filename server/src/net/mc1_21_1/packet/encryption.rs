@@ -4,10 +4,21 @@ use packetize::{Decode, Encode};
 use rsa::Pkcs1v15Encrypt;
 use sha1::{Digest, Sha1};
 
-use crate::net::{
-    http_server::HttpRequestEvent,
-    login_server::{ConnectionId, LoginServer},
+use crate::{
+    net::{
+        http_client::HttpRequestEvent,
+        login_server::{ConnectionId, LoginServer},
+    },
+    var_string::VarString,
 };
+
+#[derive(Debug, Encode, Decode)]
+pub struct EncryptionRequestS2c {
+    pub server_id: VarString<20>,
+    pub public_key: ArrayVec<u8, 161>,
+    pub verify_token: ArrayVec<u8, 4>,
+    pub should_authenticate: bool,
+}
 
 #[derive(Debug, Encode, Decode)]
 pub struct EncryptionResponseC2s {
@@ -48,7 +59,7 @@ pub fn handle_encryption_response(
         .finalize();
     let hash = BigInt::from_signed_bytes_be(&hash).to_str_radix(16);
     let connection = server.get_connection_mut(connection_id);
-    let player_name = connection.player_name.to_string();
+    let player_name = connection.name.to_string();
 
     // Check if player are not banned
     // Unpack textures

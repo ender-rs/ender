@@ -5,13 +5,13 @@ use crate::net::login_server::{ConnectionId, LoginServer};
 use super::packet::{
     client_information::{handle_client_information, ClientInformationC2s},
     disconnect::LoginDisconnectS2c,
-    encryption_request::EncryptionRequestS2c,
-    encryption_response::{handle_encryption_response, EncryptionResponseC2s},
+    encryption::{handle_encryption_response, EncryptionRequestS2c, EncryptionResponseC2s},
     feature_flags::FeatureFlagsS2c,
     finish_configuration::{
         handle_finish_configuration_ack, FinishConfigurationAckC2s, FinishConfigurationS2c,
     },
     handshake::{handle_handshake, HandShakeC2s},
+    known_packs::{handle_known_packs, KnownPacksC2s, KnownPacksS2c},
     login_ack::{handle_login_ack, LoginAckC2s},
     login_start::{handle_login_start, LoginStartC2s},
     login_success::LoginSuccessS2c,
@@ -55,6 +55,8 @@ pub enum Mc1_21_1ConnectionState {
         #[id(0x03)]
         FinishConfigurationAckC2s,
         #[id(0x0C)] FeatureFlagsS2c,
+        #[id(0x0E)] KnownPacksS2c,
+        #[id(0x07)] KnownPacksC2s,
     ),
     Play(
         #[id(0x19)] PluginMessagePlayS2c,
@@ -66,7 +68,7 @@ pub fn handle_packet(server: &mut LoginServer, connection_id: ConnectionId) -> R
     let connection = server.get_connection_mut(connection_id);
     match connection
         .state
-        .decode_server_bound_packet(&mut connection.read_buf, &mut connection.packet_stream)?
+        .decode_server_bound_packet(&mut connection.read_buf, &mut connection.stream_state)?
     {
         ServerBoundPacket::HandShakeC2s(handshake) => {
             handle_handshake(server, connection_id, &handshake)
@@ -97,6 +99,9 @@ pub fn handle_packet(server: &mut LoginServer, connection_id: ConnectionId) -> R
         }
         ServerBoundPacket::ClientInformationC2s(client_info) => {
             handle_client_information(server, connection_id, &client_info)
+        }
+        ServerBoundPacket::KnownPacksC2s(known_packs) => {
+            handle_known_packs(server, connection_id, &known_packs)
         }
     }
 }

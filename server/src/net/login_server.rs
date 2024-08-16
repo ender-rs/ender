@@ -1,90 +1,37 @@
 use std::{
     io::{self, Read},
     mem::MaybeUninit,
-    net::IpAddr,
-    str::FromStr,
-    sync::Arc,
-    time::{Duration, Instant},
+    time::Duration,
 };
 
-use aes::cipher::{generic_array, BlockDecryptMut, BlockEncryptMut, BlockSizeUser, KeyIvInit};
+use aes::cipher::KeyIvInit;
 use cfb8::{Decryptor, Encryptor};
-use fastbuf::{Buf, Buffer, ReadBuf, ReadToBuf, WriteBuf};
+use fastbuf::{Buf, ReadBuf, ReadToBuf, WriteBuf};
+use kanal::AsyncSender;
 use mio::{event::Event, net::TcpListener, Interest};
-use nonmax::{NonMaxI32, NonMaxUsize};
+use nonmax::NonMaxI32;
 use packetize::ClientBoundPacketStream;
-use rand::thread_rng;
-use rsa::{
-    signature::digest::generic_array::GenericArray, traits::PublicKeyParts, RsaPrivateKey,
-    RsaPublicKey,
-};
-use rustls::pki_types::ServerName;
 use slab::Slab;
 use tick_machine::{Tick, TickState};
-use uuid::Uuid;
-
-use crate::{
-    net::http_server::make_tls_config, packet_format::MinecraftPacketFormat,
-    player_name::PlayerName, var_string::VarString,
-};
 
 use super::{
-    http_server::HttpClient,
-    mc1_21_1::packets::{ClientBoundPacket, Mc1_21_1ConnectionState},
+    connection::Connection,
+    cryptic::{self, CrypticState},
+    http_client::HttpClient,
+    mc1_21_1::{packet::game_profile::GameProfile, packets::ClientBoundPacket},
     server::ServerState,
 };
 
 pub const PACKET_BYTE_BUFFER_LENGTH: usize = 4096;
 pub const MAX_PACKET_SIZE: i32 = 2097152;
 
-pub struct LoginServerInfo {
-    pub public_key_der: Box<[u8]>,
-    pub public_key: RsaPublicKey,
-    pub private_key: RsaPrivateKey,
-    pub session_server_ip: IpAddr,
-    pub session_server_name: ServerName<'static>,
-    pub tls_config: Arc<rustls::ClientConfig>,
-}
-
 pub struct LoginServer {
+    pub info: CrypticState,
     pub state: ServerState,
-    pub info: LoginServerInfo,
-    pub connections: Slab<Connection>,
+    pub connections: Slab<Connection<GameProfile>>,
+    listener: TcpListener,
     pub http_clients: Slab<HttpClient>,
-}
-
-pub struct Connection {
-    pub uuid: Uuid,
-    pub player_name: PlayerName,
-    pub read_buf: Box<Buffer<PACKET_BYTE_BUFFER_LENGTH>>,
-    pub write_buf: Box<Buffer<PACKET_BYTE_BUFFER_LENGTH>>,
-    pub state: Mc1_21_1ConnectionState,
-    pub packet_stream: MinecraftPacketFormat,
-    pub stream: mio::net::TcpStream,
-    pub encrypt_key: Option<Vec<u8>>,
-    pub e_cipher: Option<Encryptor<aes::Aes128>>,
-    pub d_cipher: Option<Decryptor<aes::Aes128>>,
-    pub verify_token: MaybeUninit<[u8; 4]>,
-    pub related_http_client_id: Option<NonMaxUsize>,
-}
-
-impl Connection {
-    pub fn new(stream: mio::net::TcpStream) -> Self {
-        Self {
-            read_buf: Box::new(Buffer::new()),
-            stream,
-            state: Mc1_21_1ConnectionState::default(),
-            write_buf: Box::new(Buffer::new()),
-            uuid: Uuid::nil(),
-            player_name: VarString::from_str("Unknown Player").unwrap().into(),
-            e_cipher: None,
-            d_cipher: None,
-            encrypt_key: None,
-            verify_token: MaybeUninit::uninit(),
-            related_http_client_id: None,
-            packet_stream: MinecraftPacketFormat::new(),
-        }
-    }
+    pub game_player_sender: AsyncSender<Connection<GameProfile>>,
 }
 
 pub type ConnectionId = usize;
@@ -96,46 +43,28 @@ impl LoginServer {
     const TICK: Duration = Duration::from_millis(50);
     const PORT: u16 = 25565;
 
-    pub fn new() -> Self {
-        let tls_config = make_tls_config();
-        let (public_key, private_key) = Self::generate_key_fair();
-
-        println!("keys generated");
-
-        let public_key_der = rsa_der::public_key_to_der(
-            &private_key.n().to_bytes_be(),
-            &private_key.e().to_bytes_be(),
-        )
-        .into_boxed_slice();
-
-        let session_server_ip = dns_lookup::lookup_host("sessionserver.mojang.com")
-            .map_err(|_| ())
-            .unwrap()
-            .first()
-            .map(|v| *v)
-            .ok_or(())
-            .unwrap();
-        let session_server_name =
-            ServerName::try_from(String::from_str("sessionserver.mojang.com").unwrap()).unwrap();
-
+    pub fn new(game_player_sender: AsyncSender<Connection<GameProfile>>) -> Self {
         let addr = format!("[::]:{}", Self::PORT).parse().unwrap();
-        let listener = TcpListener::bind(addr).unwrap();
+        let mut listener = TcpListener::bind(addr).unwrap();
+        let state = ServerState::new_with_listener(
+            &mut listener,
+            Self::LISTENER_KEY,
+            TickState::new(Self::TICK),
+        );
         Self {
-            state: ServerState::new(listener, Self::LISTENER_KEY, TickState::new(Self::TICK)),
+            listener,
+            state,
             connections: Slab::with_capacity(Self::CONNECTIONS_CAPACITY),
-            info: LoginServerInfo {
-                public_key,
-                private_key,
-                public_key_der,
-                tls_config,
-                session_server_ip,
-                session_server_name,
-            },
+            info: CrypticState::new(),
             http_clients: Slab::with_capacity(Self::HTTP_REQUESTS_CAPACITY),
+            game_player_sender,
         }
     }
 
-    pub fn get_connection_mut(&mut self, connection_id: ConnectionId) -> &mut Connection {
+    pub fn get_connection_mut(
+        &mut self,
+        connection_id: ConnectionId,
+    ) -> &mut Connection<GameProfile> {
         // SAFETY: connection id must valid
         unsafe { self.connections.get_unchecked_mut(connection_id as usize) }
     }
@@ -143,7 +72,7 @@ impl LoginServer {
     pub unsafe fn try_get_connection(
         &mut self,
         connection_id: ConnectionId,
-    ) -> Option<&mut Connection> {
+    ) -> Option<&mut Connection<GameProfile>> {
         self.connections.get_mut(connection_id as usize)
     }
 
@@ -164,7 +93,7 @@ impl LoginServer {
     fn on_event(&mut self, selection_event: &Event) {
         let selection_key = selection_event.token().0;
         if selection_key == Self::LISTENER_KEY {
-            let (stream, _addr) = self.state.listener.accept().unwrap();
+            let (stream, _addr) = self.listener.accept().unwrap();
             if self.connections.len() >= Self::CONNECTIONS_CAPACITY {
                 #[cfg(debug_assertions)]
                 println!("cannot accept TCP stream due to max connection capacity reached");
@@ -215,7 +144,7 @@ impl LoginServer {
             }
 
             let buf = &mut buf[..read_length];
-            LoginServer::decrypt_bytes(cipher, buf);
+            cryptic::decrypt(cipher, buf);
             connection.read_buf.try_write(buf)?;
         } else {
             connection.stream.read_to_buf(&mut connection.read_buf)?;
@@ -240,10 +169,11 @@ impl LoginServer {
         packet: &ClientBoundPacket,
     ) -> Result<(), ()> {
         let connection = self.get_connection_mut(connection_id);
-        let buf = &mut *connection.write_buf;
-        connection
-            .state
-            .encode_client_bound_packet(packet, buf, &mut connection.packet_stream)?;
+        connection.state.encode_client_bound_packet(
+            packet,
+            &mut *connection.write_buf,
+            &mut connection.stream_state,
+        )?;
         Ok(())
     }
 
@@ -254,7 +184,7 @@ impl LoginServer {
             let pos = buf.pos();
             let filled_pos = buf.filled_pos();
             let encrypted_buf = unsafe { buf.to_slice_mut().get_unchecked_mut(pos..filled_pos) };
-            Self::encryption(encrypted_buf, cipher);
+            cryptic::encrypt(encrypted_buf, cipher);
         }
 
         match io::Write::write_all(&mut connection.stream, buf.read(buf.remaining())) {
@@ -276,31 +206,6 @@ impl LoginServer {
         self.connections.remove(connection_id);
     }
 
-    fn generate_key_fair() -> (RsaPublicKey, RsaPrivateKey) {
-        println!("Generating RSA key pair");
-        let mut rng = thread_rng();
-
-        let priv_key = RsaPrivateKey::new(&mut rng, 1024).unwrap();
-        let pub_key = RsaPublicKey::from(&priv_key);
-        (pub_key, priv_key)
-    }
-
-    fn encryption(buf: &mut [u8], cipher: &mut cfb8::Encryptor<aes::Aes128>) {
-        for chunk in buf.chunks_mut(Encryptor::<aes::Aes128>::block_size()) {
-            let start = Instant::now();
-            let gen_arr = generic_array::GenericArray::from_mut_slice(chunk);
-            cipher.encrypt_block_mut(gen_arr);
-            println!("aes encryption: {:?}", start.elapsed());
-        }
-    }
-
-    fn decrypt_bytes(cipher: &mut cfb8::Decryptor<aes::Aes128>, bytes: &mut [u8]) {
-        for chunk in bytes.chunks_mut(Decryptor::<aes::Aes128>::block_size()) {
-            let gen_arr = GenericArray::from_mut_slice(chunk);
-            cipher.decrypt_block_mut(gen_arr);
-        }
-    }
-
     pub fn enable_encryption(
         &mut self,
         shared_secret: &[u8],
@@ -308,14 +213,11 @@ impl LoginServer {
     ) -> Result<(), ()> {
         let crypt_key: [u8; 16] = shared_secret.try_into().unwrap();
         let connection = self.get_connection_mut(connection_id);
-
         connection.e_cipher =
             Some(Encryptor::<aes::Aes128>::new_from_slices(&crypt_key, &crypt_key).unwrap());
         connection.d_cipher =
             Some(Decryptor::<aes::Aes128>::new_from_slices(&crypt_key, &crypt_key).unwrap());
-
         connection.encrypt_key = Some(crypt_key.to_vec());
-
         Ok(())
     }
 
@@ -326,9 +228,9 @@ impl LoginServer {
     ) -> Result<(), ()> {
         let connection = self.get_connection_mut(connection_id);
         if threshold == -1 {
-            connection.packet_stream.compression_threshold = None;
+            connection.stream_state.compression_threshold = None;
         } else {
-            connection.packet_stream.compression_threshold =
+            connection.stream_state.compression_threshold =
                 Some(unsafe { NonMaxI32::new_unchecked(threshold) });
         }
         Ok(())

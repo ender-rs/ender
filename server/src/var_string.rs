@@ -7,6 +7,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::var_int::VarInt;
 
+pub type VarString32767 = VarString<32767>;
+
 #[derive(Debug, derive_more::DerefMut, derive_more::Deref, Serialize, Deserialize, Clone)]
 pub struct VarString<const N: usize>(pub ArrayString<N>);
 

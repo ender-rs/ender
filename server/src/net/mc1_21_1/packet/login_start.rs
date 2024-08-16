@@ -8,9 +8,7 @@ use uuid::Uuid;
 use crate::{
     net::{
         login_server::{ConnectionId, LoginServer},
-        mc1_21_1::packet::{
-            encryption_request::EncryptionRequestS2c, set_compression::SetCompressionS2c,
-        },
+        mc1_21_1::packet::{encryption::EncryptionRequestS2c, set_compression::SetCompressionS2c},
     },
     player_name::PlayerName,
     var_string::VarString,
@@ -71,8 +69,8 @@ pub fn handle_login_start(
 
     dbg!("Success send encrypt request");
     let connection = server.get_connection_mut(connection_id);
-    connection.uuid = login_start.uuid;
-    connection.player_name = login_start.name.clone();
+    connection.id = login_start.uuid;
+    connection.name = login_start.name.clone();
     Ok(())
 }
 

@@ -6,9 +6,9 @@ use packetize::{Decode, Encode};
 
 use crate::{
     net::{
+        login_server::{ConnectionId, LoginServer},
         mc1_21_1::packets::Mc1_21_1ConnectionState,
         protocol_version::ProtocolVersion,
-        login_server::{ConnectionId, LoginServer},
     },
     var_int::VarInt,
 };

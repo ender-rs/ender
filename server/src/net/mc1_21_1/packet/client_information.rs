@@ -1,4 +1,4 @@
-use bitflags::{bitflags, Flags};
+use bitflags::bitflags;
 use packetize::{Decode, Encode};
 
 use crate::{
