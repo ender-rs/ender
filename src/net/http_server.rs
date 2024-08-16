@@ -52,11 +52,12 @@ impl LoginServer {
         connection_id: ConnectionId,
         event: HttpRequestEvent,
     ) -> Result<(), ()> {
-        let stream = mio::net::TcpStream::connect(SocketAddr::new(self.session_server_ip, 443))
-            .map_err(|_| ())?;
+        let stream =
+            mio::net::TcpStream::connect(SocketAddr::new(self.info.session_server_ip, 443))
+                .map_err(|_| ())?;
         let tls = rustls::ClientConnection::new(
-            self.tls_config.clone(),
-            self.session_server_name.clone(),
+            self.info.tls_config.clone(),
+            self.info.session_server_name.clone(),
         )
         .map_err(|_| ())?;
         let client = HttpClient {
@@ -70,7 +71,7 @@ impl LoginServer {
         connection.related_http_client_id = Some(unsafe { NonMaxUsize::new_unchecked(client_id) });
         let client = unsafe { self.http_clients.get_unchecked_mut(client_id) };
         mio::Registry::register(
-            &self.poll.registry(),
+            &self.state.poll.registry(),
             &mut client.stream,
             mio::Token(client_id + Self::HTTP_CLIENT_ID_OFFSET),
             Interest::READABLE.add(Interest::WRITABLE),
@@ -111,7 +112,8 @@ impl LoginServer {
         if io_state.tls_bytes_to_write() != 0 {
             client.tls.write_tls(&mut client.stream).map_err(|_| ())?;
         }
-        self.poll
+        self.state
+            .poll
             .registry()
             .reregister(
                 &mut client.stream,
@@ -175,7 +177,7 @@ impl LoginServer {
 
     pub fn close_http_client(&mut self, client_id: usize) -> HttpClient {
         let mut client = self.http_clients.remove(client_id);
-        mio::Registry::deregister(&self.poll.registry(), &mut client.stream).unwrap();
+        mio::Registry::deregister(&self.state.poll.registry(), &mut client.stream).unwrap();
         let connection = self.connections.get_mut(client.connection_id);
         if let Some(connection) = connection {
             connection.related_http_client_id = None;

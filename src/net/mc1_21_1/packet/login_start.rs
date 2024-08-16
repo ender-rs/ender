@@ -32,7 +32,7 @@ pub fn handle_login_start(
     let verify_token: [u8; 4] = random();
     let connection = server.get_connection_mut(connection_id);
     connection.verify_token = MaybeUninit::new(verify_token);
-    let public_key_der = &server.public_key_der;
+    let public_key_der = &server.info.public_key_der;
 
     dbg!(public_key_der.len());
 

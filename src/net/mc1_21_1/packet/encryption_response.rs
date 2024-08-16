@@ -24,6 +24,7 @@ pub fn handle_encryption_response(
     let verify_token = unsafe { connection.verify_token.assume_init() };
 
     let decrypted_veify_token = server
+        .info
         .private_key
         .decrypt(Pkcs1v15Encrypt, &encryption_response.verify_token)
         .unwrap();
@@ -34,6 +35,7 @@ pub fn handle_encryption_response(
     }
 
     let decrypted_shared_secret = server
+        .info
         .private_key
         .decrypt(Pkcs1v15Encrypt, &encryption_response.shared_secret)
         .unwrap();
@@ -42,7 +44,7 @@ pub fn handle_encryption_response(
 
     let hash = Sha1::new()
         .chain_update(&decrypted_shared_secret)
-        .chain_update(&server.public_key_der)
+        .chain_update(&server.info.public_key_der)
         .finalize();
     let hash = BigInt::from_signed_bytes_be(&hash).to_str_radix(16);
     let connection = server.get_connection_mut(connection_id);

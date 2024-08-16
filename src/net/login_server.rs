@@ -10,7 +10,7 @@ use std::{
 use aes::cipher::{generic_array, BlockDecryptMut, BlockEncryptMut, BlockSizeUser, KeyIvInit};
 use cfb8::{Decryptor, Encryptor};
 use fastbuf::{Buf, Buffer, ReadBuf, ReadToBuf, WriteBuf};
-use mio::{event::Event, Interest};
+use mio::{event::Event, net::TcpListener, Interest};
 use nonmax::{NonMaxI32, NonMaxUsize};
 use packetize::ClientBoundPacketStream;
 use rand::thread_rng;
@@ -31,23 +31,26 @@ use crate::{
 use super::{
     http_server::HttpClient,
     mc1_21_1::packets::{ClientBoundPacket, Mc1_21_1ConnectionState},
+    server::ServerState,
 };
 
 pub const PACKET_BYTE_BUFFER_LENGTH: usize = 4096;
 pub const MAX_PACKET_SIZE: i32 = 2097152;
 
-pub struct LoginServer {
-    pub poll: mio::Poll,
-    listener: mio::net::TcpListener,
-    tick_state: TickState,
-    pub connections: Slab<Connection>,
+pub struct LoginServerInfo {
+    pub public_key_der: Box<[u8]>,
     pub public_key: RsaPublicKey,
     pub private_key: RsaPrivateKey,
-    pub public_key_der: Box<[u8]>,
-    pub http_clients: Slab<HttpClient>,
     pub session_server_ip: IpAddr,
     pub session_server_name: ServerName<'static>,
     pub tls_config: Arc<rustls::ClientConfig>,
+}
+
+pub struct LoginServer {
+    pub state: ServerState,
+    pub info: LoginServerInfo,
+    pub connections: Slab<Connection>,
+    pub http_clients: Slab<HttpClient>,
 }
 
 pub struct Connection {
@@ -105,18 +108,6 @@ impl LoginServer {
         )
         .into_boxed_slice();
 
-        let poll = mio::Poll::new().unwrap();
-        let addr = format!("[::]:{}", Self::PORT).parse().unwrap();
-        let mut listener = mio::net::TcpListener::bind(addr).unwrap();
-        let registry = poll.registry();
-        mio::event::Source::register(
-            &mut listener,
-            registry,
-            mio::Token(Self::LISTENER_KEY),
-            Interest::READABLE,
-        )
-        .unwrap();
-
         let session_server_ip = dns_lookup::lookup_host("sessionserver.mojang.com")
             .map_err(|_| ())
             .unwrap()
@@ -127,18 +118,20 @@ impl LoginServer {
         let session_server_name =
             ServerName::try_from(String::from_str("sessionserver.mojang.com").unwrap()).unwrap();
 
+        let addr = format!("[::]:{}", Self::PORT).parse().unwrap();
+        let listener = TcpListener::bind(addr).unwrap();
         Self {
-            poll,
-            tick_state: TickState::new(Self::TICK),
-            listener,
+            state: ServerState::new(listener, Self::LISTENER_KEY, TickState::new(Self::TICK)),
             connections: Slab::with_capacity(Self::CONNECTIONS_CAPACITY),
-            public_key,
-            private_key,
-            public_key_der,
+            info: LoginServerInfo {
+                public_key,
+                private_key,
+                public_key_der,
+                tls_config,
+                session_server_ip,
+                session_server_name,
+            },
             http_clients: Slab::with_capacity(Self::HTTP_REQUESTS_CAPACITY),
-            tls_config,
-            session_server_ip,
-            session_server_name,
         }
     }
 
@@ -158,7 +151,10 @@ impl LoginServer {
         let mut events = mio::Events::with_capacity(Self::CONNECTIONS_CAPACITY);
         loop {
             self.try_tick();
-            self.poll.poll(&mut events, Some(Duration::ZERO)).unwrap();
+            self.state
+                .poll
+                .poll(&mut events, Some(Duration::ZERO))
+                .unwrap();
             for event in events.iter() {
                 self.on_event(event);
             }
@@ -168,7 +164,7 @@ impl LoginServer {
     fn on_event(&mut self, selection_event: &Event) {
         let selection_key = selection_event.token().0;
         if selection_key == Self::LISTENER_KEY {
-            let (stream, _addr) = self.listener.accept().unwrap();
+            let (stream, _addr) = self.state.listener.accept().unwrap();
             if self.connections.len() >= Self::CONNECTIONS_CAPACITY {
                 #[cfg(debug_assertions)]
                 println!("cannot accept TCP stream due to max connection capacity reached");
@@ -177,7 +173,7 @@ impl LoginServer {
             let key = self.connections.insert(Connection::new(stream));
             let connection = unsafe { self.connections.get_unchecked_mut(key) };
             mio::Registry::register(
-                &self.poll.registry(),
+                &self.state.poll.registry(),
                 &mut connection.stream,
                 mio::Token(key),
                 Interest::READABLE,
@@ -274,9 +270,9 @@ impl LoginServer {
         let connection = unsafe { self.connections.get_unchecked_mut(connection_id as usize) };
         if let Some(client_id) = connection.related_http_client_id {
             let mut client = self.http_clients.remove(client_id.get());
-            mio::Registry::deregister(&self.poll.registry(), &mut client.stream).unwrap();
+            mio::Registry::deregister(&self.state.poll.registry(), &mut client.stream).unwrap();
         }
-        mio::Registry::deregister(&self.poll.registry(), &mut connection.stream).unwrap();
+        mio::Registry::deregister(&self.state.poll.registry(), &mut connection.stream).unwrap();
         self.connections.remove(connection_id);
     }
 
@@ -290,12 +286,12 @@ impl LoginServer {
     }
 
     fn encryption(buf: &mut [u8], cipher: &mut cfb8::Encryptor<aes::Aes128>) {
-        let start = Instant::now();
         for chunk in buf.chunks_mut(Encryptor::<aes::Aes128>::block_size()) {
+            let start = Instant::now();
             let gen_arr = generic_array::GenericArray::from_mut_slice(chunk);
             cipher.encrypt_block_mut(gen_arr);
+            println!("aes encryption: {:?}", start.elapsed());
         }
-        println!("aes encryption: {:?}", start.elapsed());
     }
 
     fn decrypt_bytes(cipher: &mut cfb8::Decryptor<aes::Aes128>, bytes: &mut [u8]) {
@@ -341,6 +337,6 @@ impl LoginServer {
 
 impl Tick for LoginServer {
     fn try_tick(&mut self) {
-        self.tick_state.try_tick(|| {});
+        self.state.tick_state.try_tick(|| {});
     }
 }
