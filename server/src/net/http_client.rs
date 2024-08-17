@@ -8,7 +8,9 @@ use httparse::{Response, EMPTY_HEADER};
 use mio::{event::Event, net::TcpStream, Interest, Token};
 use nonmax::NonMaxUsize;
 
-use super::{connection::ConnectionId, login_server::LoginServer};
+use common::net::connection::ConnectionId;
+
+use super::login_server::LoginServer;
 
 pub struct HttpClient {
     pub event: HttpRequestEvent,
@@ -151,8 +153,7 @@ impl LoginServer {
 
                 let game_profile: GameProfile =
                     simd_json::serde::from_reader(buf.as_slice()).map_err(|_| ())?;
-                self.send_packet(
-                    connection_id,
+                connection.state.send_packet(
                     &LoginSuccessS2c {
                         uuid,
                         username: player_name,
@@ -161,7 +162,7 @@ impl LoginServer {
                     }
                     .into(),
                 )?;
-                self.flush_write_buffer(connection_id);
+                connection.state.flush_write_buffer()?;
                 self.transfer_player_to_game_server(connection_id);
             }
         };

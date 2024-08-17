@@ -322,6 +322,7 @@ dependencies = [
  "bitflags",
  "bytes",
  "cfb8",
+ "common",
  "derive_more",
  "dns-lookup",
  "fastbuf",

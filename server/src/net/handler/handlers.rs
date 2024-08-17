@@ -4,6 +4,7 @@ use arrayvec::{ArrayString, ArrayVec};
 use common::{
     array_capacitor::VarStringCap,
     net::{
+        connection::ConnectionId,
         mc1_21_1::{
             packet::{
                 client_info::ClientInformationC2s,
@@ -32,8 +33,7 @@ use sha1::{Digest, Sha1};
 use uuid::Uuid;
 
 use crate::net::{
-    connection::ConnectionId, game_server::GameServer, http_client::HttpRequestEvent,
-    login_server::LoginServer,
+    game_server::GameServer, http_client::HttpRequestEvent, login_server::LoginServer,
 };
 
 pub fn handle_client_information(
@@ -78,7 +78,10 @@ pub fn handle_encryption_response(
         .decrypt(Pkcs1v15Encrypt, &encryption_response.shared_secret)
         .unwrap();
 
-    server.enable_encryption(&decrypted_shared_secret, connection_id)?;
+    let connection = server.get_connection_mut(connection_id);
+    connection
+        .state
+        .enable_encryption(&decrypted_shared_secret)?;
 
     let hash = Sha1::new()
         .chain_update(&decrypted_shared_secret)
@@ -117,7 +120,7 @@ pub fn handle_handshake(
     handshake: &HandShakeC2s,
 ) -> Result<(), ()> {
     let connection = server.get_connection_mut(connection_id);
-    connection.connection.state = match handshake.next_state {
+    connection.state.state = match handshake.next_state {
         NextState::Status => Mc1_21_1ConnectionState::Status,
         NextState::Login => Mc1_21_1ConnectionState::Login,
         NextState::Transfer => todo!(),
@@ -159,6 +162,7 @@ pub fn handle_login_start(
 
     let verify_token: [u8; 4] = rand::random();
     let connection = server.get_connection_mut(connection_id);
+    connection.state.send_set_compression_packet()?;
     connection.verify_token = MaybeUninit::new(verify_token);
     let public_key_der = &server.info.public_key_der;
 
@@ -184,9 +188,8 @@ pub fn handle_login_start(
         verify_token_array.set_len(verify_token.len());
     }
 
-    send_set_compression_packet(server, connection_id)?;
-    server.send_packet(
-        connection_id,
+    let connection = server.get_connection_mut(connection_id);
+    connection.state.send_packet(
         &EncryptionRequestS2c {
             server_id: VarStringCap("".to_string()),
             public_key,
@@ -195,29 +198,12 @@ pub fn handle_login_start(
         }
         .into(),
     )?;
-    server.flush_write_buffer(connection_id)?;
+    connection.state.flush_write_buffer()?;
 
     dbg!("Success send encrypt request");
     let connection = server.get_connection_mut(connection_id);
     connection.id = login_start.uuid;
     connection.name = login_start.name.clone();
-    Ok(())
-}
-
-fn send_set_compression_packet(
-    server: &mut LoginServer,
-    connection_id: ConnectionId,
-) -> Result<(), ()> {
-    const DEFAULT_COMPRESSION_THRESHOLD: i32 = 256000;
-    server.send_packet(
-        connection_id,
-        &SetCompressionS2c {
-            threshold: DEFAULT_COMPRESSION_THRESHOLD.into(),
-        }
-        .into(),
-    )?;
-    server.flush_write_buffer(connection_id)?;
-    server.enable_compression(connection_id, DEFAULT_COMPRESSION_THRESHOLD)?;
     Ok(())
 }
 
@@ -236,8 +222,8 @@ pub fn handle_status_request(
     status_request: &StatusRequestC2s,
 ) -> Result<(), ()> {
     dbg!(status_request);
-    server.send_packet(
-        connection_id,
+    let connection = server.get_connection_mut(connection_id);
+    connection.state.send_packet(
         &StatusResponseS2c {
             status: Status {
                 version: Version {
@@ -266,7 +252,7 @@ pub fn handle_status_request(
         }
         .into(),
     )?;
-    server.flush_write_buffer(connection_id)?;
+    connection.state.flush_write_buffer()?;
     Ok(())
 }
 
@@ -275,14 +261,14 @@ pub fn handle_ping_request(
     connection_id: ConnectionId,
     ping_request: &PingRequestC2s,
 ) -> Result<(), ()> {
-    server.send_packet(
-        connection_id,
+    let connection = server.get_connection_mut(connection_id);
+    connection.state.send_packet(
         &PingResponseS2c {
             payload: ping_request.payload,
         }
         .into(),
     )?;
-    server.flush_write_buffer(connection_id)?;
+    connection.state.flush_write_buffer()?;
     dbg!(ping_request);
     Ok(())
 }

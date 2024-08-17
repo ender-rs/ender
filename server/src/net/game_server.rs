@@ -8,7 +8,7 @@ use mio::{event::Event, Interest, Poll, Token};
 use slab::Slab;
 use tick_machine::{Tick, TickState};
 
-use super::connection::{Connection, ConnectionId};
+use common::net::connection::{Connection, ConnectionId};
 
 pub struct GameServer {
     poll: Poll,

@@ -1,15 +1,17 @@
 use std::{io::Read, mem::MaybeUninit};
 
-use cfb8::{Decryptor, Encryptor};
-use common::{
+use crate::{
     net::mc1_21_1::packets::{ClientBoundPacket, Mc1_21_1ConnectionState},
-    packet_format::MinecraftPacketFormat,
+    packet_format::{MinecraftPacketFormat, PACKET_BYTE_BUFFER_LENGTH},
 };
+use aes::cipher::KeyIvInit;
+use cfb8::{Decryptor, Encryptor};
 use fastbuf::{Buf, Buffer, ReadBuf, ReadToBuf, WriteBuf};
 use mio::Registry;
+use nonmax::NonMaxI32;
 use packetize::ClientBoundPacketStream;
 
-use super::{cryptic, login_server::PACKET_BYTE_BUFFER_LENGTH};
+use super::{cryptic, mc1_21_1::packet::set_compression::SetCompressionS2c};
 
 pub type ConnectionId = usize;
 
@@ -82,5 +84,38 @@ impl Connection {
 
     pub fn close(&mut self, registry: &Registry) {
         mio::Registry::deregister(&registry, &mut self.stream).unwrap();
+    }
+
+    pub fn send_set_compression_packet(&mut self) -> Result<(), ()> {
+        const DEFAULT_COMPRESSION_THRESHOLD: i32 = 25600;
+        self.send_packet(
+            &SetCompressionS2c {
+                threshold: DEFAULT_COMPRESSION_THRESHOLD.into(),
+            }
+            .into(),
+        )?;
+        self.flush_write_buffer()?;
+        self.enable_compression(DEFAULT_COMPRESSION_THRESHOLD)?;
+        Ok(())
+    }
+
+    pub fn enable_compression(&mut self, threshold: i32) -> Result<(), ()> {
+        if threshold == -1 {
+            self.stream_state.compression_threshold = None;
+        } else {
+            self.stream_state.compression_threshold =
+                Some(unsafe { NonMaxI32::new_unchecked(threshold) });
+        }
+        Ok(())
+    }
+
+    pub fn enable_encryption(&mut self, shared_secret: &[u8]) -> Result<(), ()> {
+        let crypt_key: [u8; 16] = shared_secret.try_into().unwrap();
+        self.e_cipher =
+            Some(Encryptor::<aes::Aes128>::new_from_slices(&crypt_key, &crypt_key).unwrap());
+        self.d_cipher =
+            Some(Decryptor::<aes::Aes128>::new_from_slices(&crypt_key, &crypt_key).unwrap());
+        self.encrypt_key = Some(crypt_key.to_vec());
+        Ok(())
     }
 }

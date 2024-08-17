@@ -1,7 +1,7 @@
-use common::net::mc1_21_1::packets::ServerBoundPacket;
+use common::net::{connection::ConnectionId, mc1_21_1::packets::ServerBoundPacket};
 use packetize::ServerBoundPacketStream;
 
-use crate::net::{connection::ConnectionId, game_server::GameServer, login_server::LoginServer};
+use crate::net::{game_server::GameServer, login_server::LoginServer};
 
 use super::handlers::{
     handle_client_information, handle_encryption_response, handle_finish_configuration_ack,
@@ -13,7 +13,7 @@ pub fn handle_login_server_s_packet(
     server: &mut LoginServer,
     connection_id: ConnectionId,
 ) -> Result<(), ()> {
-    let connection = &mut server.get_connection_mut(connection_id).connection;
+    let connection = &mut server.get_connection_mut(connection_id).state;
     match connection
         .state
         .decode_server_bound_packet(&mut connection.read_buf, &mut connection.stream_state)?

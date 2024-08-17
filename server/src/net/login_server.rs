@@ -1,20 +1,19 @@
 use std::{mem::MaybeUninit, time::Duration};
 
-use aes::cipher::KeyIvInit;
-use cfb8::{Decryptor, Encryptor};
-use common::net::mc1_21_1::{packet::game_profile::GameProfile, packets::ClientBoundPacket};
+use common::net::mc1_21_1::packet::game_profile::GameProfile;
 use derive_more::derive::{Deref, DerefMut};
 use fastbuf::{Buf, ReadBuf};
 use kanal::Sender;
 use mio::{event::Event, net::TcpListener, Interest, Poll};
-use nonmax::{NonMaxI32, NonMaxUsize};
+use nonmax::NonMaxUsize;
 use slab::Slab;
 
-use super::{
+use common::net::{
     connection::{Connection, ConnectionId},
     cryptic::CrypticState,
-    http_client::HttpClient,
 };
+
+use super::http_client::HttpClient;
 
 pub const PACKET_BYTE_BUFFER_LENGTH: usize = 4096;
 pub const MAX_PACKET_SIZE: i32 = 2097152;
@@ -35,7 +34,7 @@ pub struct LoginConnection {
     game_profile: GameProfile,
     pub verify_token: MaybeUninit<[u8; 4]>,
     pub attached_http_client_id: Option<NonMaxUsize>,
-    pub connection: Connection,
+    pub state: Connection,
 }
 
 impl LoginServer {
@@ -99,7 +98,7 @@ impl LoginServer {
                 return;
             }
             let key = self.connections.insert(LoginConnection {
-                connection: Connection::new(stream),
+                state: Connection::new(stream),
                 game_profile: GameProfile::default(),
                 verify_token: MaybeUninit::uninit(),
                 attached_http_client_id: None,
@@ -107,7 +106,7 @@ impl LoginServer {
             let connection = unsafe { self.connections.get_unchecked_mut(key) };
             mio::Registry::register(
                 &self.poll.registry(),
-                &mut connection.connection.stream,
+                &mut connection.state.stream,
                 mio::Token(key),
                 Interest::READABLE,
             )
@@ -138,7 +137,7 @@ impl LoginServer {
 
     fn on_connection_read(&mut self, connection_id: ConnectionId) -> Result<(), ()> {
         let connection = self.get_connection_mut(connection_id);
-        connection.connection.read_to_buf_from_stream()?;
+        connection.state.read_to_buf_from_stream()?;
         self.on_read_packet(connection_id)?;
         Ok(())
     }
@@ -146,7 +145,7 @@ impl LoginServer {
     fn on_read_packet(&mut self, connection_id: ConnectionId) -> Result<(), ()> {
         while self
             .get_connection_mut(connection_id)
-            .connection
+            .state
             .read_buf
             .remaining()
             != 0
@@ -154,23 +153,7 @@ impl LoginServer {
             super::handler::mc_1_12_1_handler::handle_login_server_s_packet(self, connection_id)?;
         }
         let connection = unsafe { self.connections.get_unchecked_mut(connection_id) };
-        connection.connection.read_buf.clear();
-        Ok(())
-    }
-
-    pub fn send_packet(
-        &mut self,
-        connection_id: ConnectionId,
-        packet: &ClientBoundPacket,
-    ) -> Result<(), ()> {
-        let connection = self.get_connection_mut(connection_id);
-        connection.connection.send_packet(packet)?;
-        Ok(())
-    }
-
-    pub fn flush_write_buffer(&mut self, connection_id: ConnectionId) -> Result<(), ()> {
-        let connection = self.get_connection_mut(connection_id);
-        connection.connection.flush_write_buffer()?;
+        connection.state.read_buf.clear();
         Ok(())
     }
 
@@ -186,7 +169,7 @@ impl LoginServer {
     pub fn close_connection(&mut self, connection_id: ConnectionId) {
         self.remove_attached_http_client(connection_id);
         if let Some(connection) = self.connections.get_mut(connection_id) {
-            connection.connection.close(self.poll.registry());
+            connection.state.close(self.poll.registry());
             self.connections.remove(connection_id);
         }
     }
@@ -196,41 +179,11 @@ impl LoginServer {
         let mut connection = self.connections.remove(connection_id);
         self.poll
             .registry()
-            .deregister(&mut connection.connection.stream)
+            .deregister(&mut connection.state.stream)
             .unwrap();
         let sender = &self.game_player_sender;
         sender
-            .send((connection.connection, connection.game_profile))
+            .send((connection.state, connection.game_profile))
             .unwrap();
-    }
-
-    pub fn enable_encryption(
-        &mut self,
-        shared_secret: &[u8],
-        connection_id: ConnectionId,
-    ) -> Result<(), ()> {
-        let crypt_key: [u8; 16] = shared_secret.try_into().unwrap();
-        let connection = self.get_connection_mut(connection_id);
-        connection.connection.e_cipher =
-            Some(Encryptor::<aes::Aes128>::new_from_slices(&crypt_key, &crypt_key).unwrap());
-        connection.connection.d_cipher =
-            Some(Decryptor::<aes::Aes128>::new_from_slices(&crypt_key, &crypt_key).unwrap());
-        connection.connection.encrypt_key = Some(crypt_key.to_vec());
-        Ok(())
-    }
-
-    pub fn enable_compression(
-        &mut self,
-        connection_id: ConnectionId,
-        threshold: i32,
-    ) -> Result<(), ()> {
-        let connection = self.get_connection_mut(connection_id);
-        if threshold == -1 {
-            connection.connection.stream_state.compression_threshold = None;
-        } else {
-            connection.connection.stream_state.compression_threshold =
-                Some(unsafe { NonMaxI32::new_unchecked(threshold) });
-        }
-        Ok(())
     }
 }
