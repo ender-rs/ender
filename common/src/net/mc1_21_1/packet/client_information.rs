@@ -1,10 +1,7 @@
 use bitflags::bitflags;
 use packetize::{Decode, Encode};
 
-use crate::{
-    net::{connection::ConnectionId, game_server::GameServer, login_server::LoginServer},
-    var_string::VarString,
-};
+use crate::var_string::VarString;
 
 #[derive(Debug, Encode, Decode)]
 pub struct ClientInformationC2s {
@@ -57,11 +54,4 @@ pub enum ChatMode {
     Hidden = 2,
 }
 
-pub fn handle_client_information(
-    server: &mut GameServer,
-    connection_id: ConnectionId,
-    client_information: &ClientInformationC2s,
-) -> Result<(), ()> {
-    dbg!(client_information);
-    Ok(())
-}
+

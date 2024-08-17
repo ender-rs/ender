@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+use common::net::mc1_21_1::packet::game_profile::GameProfile;
 use derive_more::derive::{Deref, DerefMut};
 use fastbuf::{Buf, ReadBuf};
 use kanal::Receiver;
@@ -7,10 +8,7 @@ use mio::{event::Event, Interest, Poll, Token};
 use slab::Slab;
 use tick_machine::{Tick, TickState};
 
-use super::{
-    connection::{Connection, ConnectionId},
-    mc1_21_1::packet::game_profile::GameProfile,
-};
+use super::connection::{Connection, ConnectionId};
 
 pub struct GameServer {
     poll: Poll,
@@ -81,7 +79,7 @@ impl GameServer {
             .remaining()
             != 0
         {
-            super::mc1_21_1::packets::handle_game_server_s_packet(self, connection_id)?;
+            super::handler::mc_1_12_1_handler::handle_game_server_s_packet(self, connection_id)?;
         }
         let connection = unsafe { self.connections.get_unchecked_mut(connection_id) };
         connection.connection.read_buf.clear();

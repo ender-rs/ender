@@ -4,7 +4,9 @@ use fastbuf::{Buf, Buffer, ReadBuf, WriteBuf};
 use nonmax::NonMaxI32;
 use packetize::{Decode, Encode, PacketStreamFormat};
 
-use crate::{net::login_server::PACKET_BYTE_BUFFER_LENGTH, var_int::VarInt};
+use crate::var_int::VarInt;
+
+pub const PACKET_BYTE_BUFFER_LENGTH: usize = 4096;
 
 pub struct MinecraftPacketFormat {
     pub compression_threshold: Option<NonMaxI32>,

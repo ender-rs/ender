@@ -3,11 +3,7 @@ use std::fmt::Debug;
 use derive_more::derive::{Deref, DerefMut};
 use packetize::{Decode, Encode};
 
-use crate::{
-    array_capacitor::VecCap,
-    identifier::Identifier,
-    net::{connection::ConnectionId, game_server::GameServer},
-};
+use crate::{array_capacitor::VecCap, identifier::Identifier};
 
 #[derive(Debug)]
 pub struct PluginMessage {
@@ -45,13 +41,4 @@ impl Decode for PluginMessage {
         let data = data.into();
         Ok(PluginMessage { channel, data })
     }
-}
-
-pub fn handle_plugin_message(
-    server: &mut GameServer,
-    connection_id: ConnectionId,
-    plugin_message: &PluginMessage,
-) -> Result<(), ()> {
-    println!("{plugin_message:?}");
-    Ok(())
 }

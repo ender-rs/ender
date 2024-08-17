@@ -314,12 +314,94 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1462739cb27611015575c0c11df5df7601141071f07518d56fcc1be504cbec97"
 
 [[package]]
+name = "client"
+version = "0.1.0"
+dependencies = [
+ "aes",
+ "arrayvec",
+ "bitflags",
+ "bytes",
+ "cfb8",
+ "derive_more",
+ "dns-lookup",
+ "fastbuf",
+ "fastvarint",
+ "flate2",
+ "get_if_addrs",
+ "httparse",
+ "hyper",
+ "kanal",
+ "mio",
+ "native-tls",
+ "nonmax",
+ "num-bigint",
+ "packetize",
+ "pem",
+ "rand",
+ "rcgen",
+ "ring",
+ "rsa",
+ "rsa-der",
+ "rustls",
+ "rustls-pemfile",
+ "serde",
+ "sha1",
+ "simd-json",
+ "slab",
+ "tick-machine",
+ "ufmt",
+ "uuid",
+ "webpki-roots",
+]
+
+[[package]]
 name = "cmake"
 version = "0.1.51"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fb1e43aa7fd152b1f968787f7dbcdeb306d1867ff373c69955211876c053f91a"
 dependencies = [
  "cc",
+]
+
+[[package]]
+name = "common"
+version = "0.1.0"
+dependencies = [
+ "aes",
+ "arrayvec",
+ "bitflags",
+ "bytes",
+ "cfb8",
+ "derive_more",
+ "dns-lookup",
+ "fastbuf",
+ "fastvarint",
+ "flate2",
+ "get_if_addrs",
+ "httparse",
+ "hyper",
+ "kanal",
+ "mio",
+ "native-tls",
+ "nonmax",
+ "num-bigint",
+ "packetize",
+ "pem",
+ "rand",
+ "rcgen",
+ "ring",
+ "rsa",
+ "rsa-der",
+ "rustls",
+ "rustls-pemfile",
+ "serde",
+ "sha1",
+ "simd-json",
+ "slab",
+ "tick-machine",
+ "ufmt",
+ "uuid",
+ "webpki-roots",
 ]
 
 [[package]]
@@ -1571,6 +1653,7 @@ dependencies = [
  "bitflags",
  "bytes",
  "cfb8",
+ "common",
  "derive_more",
  "dns-lookup",
  "fastbuf",

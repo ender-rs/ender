@@ -1,11 +1,8 @@
-use std::{
-    io::{self},
-    mem::MaybeUninit,
-    time::Duration,
-};
+use std::{mem::MaybeUninit, time::Duration};
 
 use aes::cipher::KeyIvInit;
 use cfb8::{Decryptor, Encryptor};
+use common::net::mc1_21_1::{packet::game_profile::GameProfile, packets::ClientBoundPacket};
 use derive_more::derive::{Deref, DerefMut};
 use fastbuf::{Buf, ReadBuf};
 use kanal::Sender;
@@ -15,9 +12,8 @@ use slab::Slab;
 
 use super::{
     connection::{Connection, ConnectionId},
-    cryptic::{self, CrypticState},
+    cryptic::CrypticState,
     http_client::HttpClient,
-    mc1_21_1::{packet::game_profile::GameProfile, packets::ClientBoundPacket},
 };
 
 pub const PACKET_BYTE_BUFFER_LENGTH: usize = 4096;
@@ -155,7 +151,7 @@ impl LoginServer {
             .remaining()
             != 0
         {
-            super::mc1_21_1::packets::handle_login_server_s_packet(self, connection_id)?;
+            super::handler::mc_1_12_1_handler::handle_login_server_s_packet(self, connection_id)?;
         }
         let connection = unsafe { self.connections.get_unchecked_mut(connection_id) };
         connection.connection.read_buf.clear();

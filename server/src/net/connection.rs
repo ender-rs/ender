@@ -1,17 +1,12 @@
 use std::{io::Read, mem::MaybeUninit};
 
 use cfb8::{Decryptor, Encryptor};
+use common::{net::mc1_21_1::packets::{ClientBoundPacket, Mc1_21_1ConnectionState}, packet_format::MinecraftPacketFormat};
 use fastbuf::{Buf, Buffer, ReadBuf, ReadToBuf, WriteBuf};
 use mio::{Poll, Registry};
 use packetize::ClientBoundPacketStream;
 
-use crate::packet_format::MinecraftPacketFormat;
-
-use super::{
-    cryptic,
-    login_server::PACKET_BYTE_BUFFER_LENGTH,
-    mc1_21_1::packets::{ClientBoundPacket, Mc1_21_1ConnectionState},
-};
+use super::{cryptic, login_server::PACKET_BYTE_BUFFER_LENGTH};
 
 pub type ConnectionId = usize;
 

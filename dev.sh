@@ -1,2 +1,2 @@
 cd server
-cargo run
+cargo run -p server

@@ -3,11 +3,10 @@ use std::{
     net::SocketAddr,
 };
 
+use common::net::mc1_21_1::packet::{game_profile::GameProfile, login_success::LoginSuccessS2c};
 use httparse::{Response, EMPTY_HEADER};
 use mio::{event::Event, net::TcpStream, Interest, Token};
 use nonmax::NonMaxUsize;
-
-use crate::net::mc1_21_1::packet::{game_profile::GameProfile, login_success::LoginSuccessS2c};
 
 use super::{connection::ConnectionId, login_server::LoginServer};
 
