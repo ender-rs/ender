@@ -5,10 +5,7 @@ use packetize::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{
-    array_capacitor::{VarStringCap, VarStringCap32767},
-    player_name::PlayerName,
-};
+use crate::{array_capacitor::VarStringCap32767, player_name::PlayerName};
 
 #[derive(Serialize, Deserialize, Debug, Encode, Decode, Clone)]
 pub struct Property {

@@ -6,7 +6,7 @@ use common::{
     net::{
         mc1_21_1::{
             packet::{
-                client_information::ClientInformationC2s,
+                client_info::ClientInformationC2s,
                 disconnect::Disconnect,
                 encryption::{EncryptionRequestS2c, EncryptionResponseC2s},
                 feature_flags::FeatureFlagsS2c,

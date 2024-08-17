@@ -1,4 +1,4 @@
-pub mod client_information;
+pub mod client_info;
 pub mod disconnect;
 pub mod encryption;
 pub mod feature_flags;

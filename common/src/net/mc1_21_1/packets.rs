@@ -1,7 +1,7 @@
 use packetize::streaming_packets;
 
 use super::packet::{
-    client_information::ClientInformationC2s,
+    client_info::ClientInformationC2s,
     disconnect::LoginDisconnectS2c,
     encryption::{EncryptionRequestS2c, EncryptionResponseC2s},
     feature_flags::FeatureFlagsS2c,
@@ -30,9 +30,9 @@ pub enum Mc1_21_1ConnectionState {
         PingResponseS2c,
     ),
     Login(
-        LoginStartC2s,
-        #[id(0)] LoginDisconnectS2c,
-        #[id(1)] EncryptionRequestS2c,
+        #[id(0x00)] LoginStartC2s,
+        #[id(0x00)] LoginDisconnectS2c,
+        #[id(0x01)] EncryptionRequestS2c,
         #[id(0x01)] EncryptionResponseC2s,
         #[id(0x02)] LoginSuccessS2c,
         #[id(0x03)] SetCompressionS2c,
