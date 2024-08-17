@@ -9,9 +9,12 @@ use cfb8::{Decryptor, Encryptor};
 use fastbuf::{Buf, Buffer, ReadBuf, ReadToBuf, WriteBuf};
 use mio::Registry;
 use nonmax::NonMaxI32;
-use packetize::ClientBoundPacketStream;
+use packetize::{ClientBoundPacketStream, ServerBoundPacketStream};
 
-use super::{cryptic, mc1_21_1::packet::set_compression::SetCompressionS2c};
+use super::{
+    cryptic,
+    mc1_21_1::{packet::set_compression::SetCompressionS2c, packets::ServerBoundPacket},
+};
 
 pub type ConnectionId = usize;
 
@@ -59,8 +62,17 @@ impl Connection {
         Ok(())
     }
 
-    pub fn send_packet(&mut self, packet: &ClientBoundPacket) -> Result<(), ()> {
+    pub fn send_packet_to_client(&mut self, packet: &ClientBoundPacket) -> Result<(), ()> {
         self.state.encode_client_bound_packet(
+            packet,
+            &mut *self.write_buf,
+            &mut self.stream_state,
+        )?;
+        Ok(())
+    }
+
+    pub fn send_packet_to_server(&mut self, packet: &ServerBoundPacket) -> Result<(), ()> {
+        self.state.encode_server_bound_packet(
             packet,
             &mut *self.write_buf,
             &mut self.stream_state,
@@ -82,13 +94,9 @@ impl Connection {
         Ok(())
     }
 
-    pub fn close(&mut self, registry: &Registry) {
-        mio::Registry::deregister(&registry, &mut self.stream).unwrap();
-    }
-
     pub fn send_set_compression_packet(&mut self) -> Result<(), ()> {
         const DEFAULT_COMPRESSION_THRESHOLD: i32 = 25600;
-        self.send_packet(
+        self.send_packet_to_client(
             &SetCompressionS2c {
                 threshold: DEFAULT_COMPRESSION_THRESHOLD.into(),
             }

@@ -9,7 +9,7 @@ use crate::{net::protocol_version::ProtocolVersion, var_int::VarInt};
 #[derive(Debug, Encode, Decode)]
 pub struct HandShakeC2s {
     pub protocol_version: ProtocolVersion,
-    pub server_address: ArrayString<1000>,
+    pub server_address: ArrayString<256>,
     pub server_port: u16,
     pub next_state: NextState,
 }

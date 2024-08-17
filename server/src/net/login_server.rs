@@ -169,7 +169,7 @@ impl LoginServer {
     pub fn close_connection(&mut self, connection_id: ConnectionId) {
         self.remove_attached_http_client(connection_id);
         if let Some(connection) = self.connections.get_mut(connection_id) {
-            connection.state.close(self.poll.registry());
+            mio::Registry::deregister(&self.poll.registry(), &mut connection.state.stream).unwrap();
             self.connections.remove(connection_id);
         }
     }
