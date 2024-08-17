@@ -153,7 +153,7 @@ impl LoginServer {
 
                 let game_profile: GameProfile =
                     simd_json::serde::from_reader(buf.as_slice()).map_err(|_| ())?;
-                connection.state.send_packet(
+                connection.state.send_packet_to_client(
                     &LoginSuccessS2c {
                         uuid,
                         username: player_name,

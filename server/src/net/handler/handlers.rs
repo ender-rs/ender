@@ -143,7 +143,7 @@ pub fn handle_login_ack(
 ) -> Result<(), ()> {
     dbg!(login_ack);
     let connection = server.get_connection_mut(connection_id);
-    connection.send_packet(
+    connection.send_packet_to_client(
         &FeatureFlagsS2c {
             flags: vec!["minecraft:vanilla".into()],
         }
@@ -189,7 +189,7 @@ pub fn handle_login_start(
     }
 
     let connection = server.get_connection_mut(connection_id);
-    connection.state.send_packet(
+    connection.state.send_packet_to_client(
         &EncryptionRequestS2c {
             server_id: VarStringCap("".to_string()),
             public_key,
@@ -223,7 +223,7 @@ pub fn handle_status_request(
 ) -> Result<(), ()> {
     dbg!(status_request);
     let connection = server.get_connection_mut(connection_id);
-    connection.state.send_packet(
+    connection.state.send_packet_to_client(
         &StatusResponseS2c {
             status: Status {
                 version: Version {
@@ -262,7 +262,7 @@ pub fn handle_ping_request(
     ping_request: &PingRequestC2s,
 ) -> Result<(), ()> {
     let connection = server.get_connection_mut(connection_id);
-    connection.state.send_packet(
+    connection.state.send_packet_to_client(
         &PingResponseS2c {
             payload: ping_request.payload,
         }
