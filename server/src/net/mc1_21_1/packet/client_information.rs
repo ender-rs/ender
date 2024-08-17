@@ -2,7 +2,7 @@ use bitflags::bitflags;
 use packetize::{Decode, Encode};
 
 use crate::{
-    net::{connection::ConnectionId, login_server::LoginServer},
+    net::{connection::ConnectionId, game_server::GameServer, login_server::LoginServer},
     var_string::VarString,
 };
 
@@ -58,7 +58,7 @@ pub enum ChatMode {
 }
 
 pub fn handle_client_information(
-    server: &mut LoginServer,
+    server: &mut GameServer,
     connection_id: ConnectionId,
     client_information: &ClientInformationC2s,
 ) -> Result<(), ()> {

@@ -1,15 +1,18 @@
-use std::{cmp::min, fmt::Debug};
+use std::fmt::Debug;
 
-use arrayvec::ArrayVec;
 use derive_more::derive::{Deref, DerefMut};
 use packetize::{Decode, Encode};
 
-use crate::{identifier::Identifier, net::{connection::ConnectionId, login_server::LoginServer}};
+use crate::{
+    array_capacitor::VecCap,
+    identifier::Identifier,
+    net::{connection::ConnectionId, game_server::GameServer},
+};
 
 #[derive(Debug)]
 pub struct PluginMessage {
     pub channel: Identifier,
-    pub data: ArrayVec<u8, 32767>,
+    pub data: VecCap<u8, 1048576>,
 }
 
 #[derive(Deref, DerefMut, Encode, Decode, Debug)]
@@ -25,24 +28,27 @@ pub struct PluginMessageConfS2c(pub PluginMessage);
 pub struct PluginMessagePlayS2c(pub PluginMessage);
 
 impl Encode for PluginMessage {
-    fn encode(&self, _buf: &mut impl fastbuf::WriteBuf) -> Result<(), ()> {
-        todo!()
+    fn encode(&self, buf: &mut impl fastbuf::WriteBuf) -> Result<(), ()> {
+        self.channel.encode(buf)?;
+        self.data.as_slice().encode(buf)?;
+        Ok(())
     }
 }
 
 impl Decode for PluginMessage {
     fn decode(buf: &mut impl fastbuf::ReadBuf) -> Result<Self, ()> {
         let channel = Identifier::decode(buf)?;
-        let mut data = ArrayVec::new();
+        let mut data = Vec::with_capacity(buf.remaining());
         let buf = buf.read(buf.remaining());
         unsafe { data.set_len(buf.len()) };
         data.as_mut_slice().copy_from_slice(buf);
+        let data = data.into();
         Ok(PluginMessage { channel, data })
     }
 }
 
 pub fn handle_plugin_message(
-    server: &mut LoginServer,
+    server: &mut GameServer,
     connection_id: ConnectionId,
     plugin_message: &PluginMessage,
 ) -> Result<(), ()> {

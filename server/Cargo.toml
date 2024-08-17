@@ -22,7 +22,7 @@ mio = { version = "1.0.1", features = ["os-poll", "net"] }
 native-tls = "0.2.12"
 nonmax = { version = "0.5.5", features = ["serde"] }
 num-bigint = "0.4.6"
-packetize = "0.89.0"
+packetize = "0.90.0"
 pem = "3.0.4"
 rand = "0.8.5"
 rcgen = { version = "0.13.1", features = ["pem", "x509-parser"] }

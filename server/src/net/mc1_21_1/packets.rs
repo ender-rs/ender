@@ -1,6 +1,6 @@
 use packetize::{streaming_packets, ServerBoundPacketStream};
 
-use crate::net::{connection::ConnectionId, login_server::LoginServer};
+use crate::net::{connection::ConnectionId, game_server::GameServer, login_server::LoginServer};
 
 use super::packet::{
     client_information::{handle_client_information, ClientInformationC2s},
@@ -20,6 +20,7 @@ use super::packet::{
         handle_plugin_message, PluginMessageConfC2s, PluginMessageConfS2c, PluginMessagePlayC2s,
         PluginMessagePlayS2c,
     },
+    registry_data::RegistryDataS2c,
     set_compression::SetCompressionS2c,
     status::{handle_status_request, StatusRequestC2s, StatusResponseS2c},
 };
@@ -57,6 +58,7 @@ pub enum Mc1_21_1ConnectionState {
         #[id(0x0C)] FeatureFlagsS2c,
         #[id(0x0E)] KnownPacksS2c,
         #[id(0x07)] KnownPacksC2s,
+        #[id(0x07)] RegistryDataS2c,
     ),
     Play(
         #[id(0x19)] PluginMessagePlayS2c,
@@ -64,7 +66,10 @@ pub enum Mc1_21_1ConnectionState {
     ),
 }
 
-pub fn handle_packet(server: &mut LoginServer, connection_id: ConnectionId) -> Result<(), ()> {
+pub fn handle_login_server_s_packet(
+    server: &mut LoginServer,
+    connection_id: ConnectionId,
+) -> Result<(), ()> {
     let connection = &mut server.get_connection_mut(connection_id).connection;
     match connection
         .state
@@ -85,6 +90,19 @@ pub fn handle_packet(server: &mut LoginServer, connection_id: ConnectionId) -> R
         ServerBoundPacket::EncryptionResponseC2s(encryption_response) => {
             handle_encryption_response(server, connection_id, &encryption_response)
         }
+        _ => Err(()),
+    }
+}
+
+pub fn handle_game_server_s_packet(
+    server: &mut GameServer,
+    connection_id: ConnectionId,
+) -> Result<(), ()> {
+    let connection = &mut server.get_connection_mut(connection_id).connection;
+    match connection
+        .state
+        .decode_server_bound_packet(&mut connection.read_buf, &mut connection.stream_state)?
+    {
         ServerBoundPacket::LoginAckC2s(login_ack) => {
             handle_login_ack(server, connection_id, &login_ack)
         }
@@ -103,5 +121,6 @@ pub fn handle_packet(server: &mut LoginServer, connection_id: ConnectionId) -> R
         ServerBoundPacket::KnownPacksC2s(known_packs) => {
             handle_known_packs(server, connection_id, &known_packs)
         }
+        _ => Err(()),
     }
 }

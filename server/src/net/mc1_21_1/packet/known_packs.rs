@@ -1,7 +1,10 @@
 use derive_more::derive::{Deref, DerefMut};
 use packetize::{Decode, Encode};
 
-use crate::{net::{connection::ConnectionId, login_server::LoginServer}, var_string::VarString32767};
+use crate::{
+    net::{connection::ConnectionId, game_server::GameServer},
+    var_string::VarString32767,
+};
 
 #[derive(Debug, Encode, Decode, Deref, DerefMut)]
 pub struct KnownPacksS2c(KnownPacks);
@@ -22,7 +25,7 @@ pub struct KnownPack {
 }
 
 pub fn handle_known_packs(
-    server: &mut LoginServer,
+    server: &mut GameServer,
     connection_id: ConnectionId,
     known_packs: &KnownPacks,
 ) -> Result<(), ()> {

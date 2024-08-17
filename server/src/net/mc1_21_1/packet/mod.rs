@@ -11,5 +11,6 @@ pub mod login_start;
 pub mod login_success;
 pub mod ping;
 pub mod plugin_message;
+pub mod registry_data;
 pub mod set_compression;
 pub mod status;

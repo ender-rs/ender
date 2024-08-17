@@ -62,10 +62,10 @@ impl LoginServer {
         };
         let client_id = self.http_clients.insert(client);
         let connection = self.get_connection_mut(connection_id);
-        connection.related_http_client_id = Some(unsafe { NonMaxUsize::new_unchecked(client_id) });
+        connection.attached_http_client_id = Some(unsafe { NonMaxUsize::new_unchecked(client_id) });
         let client = unsafe { self.http_clients.get_unchecked_mut(client_id) };
         mio::Registry::register(
-            &self.state.poll.registry(),
+            &self.poll.registry(),
             &mut client.stream,
             mio::Token(client_id + Self::HTTP_CLIENT_ID_OFFSET),
             Interest::READABLE.add(Interest::WRITABLE),
@@ -106,8 +106,7 @@ impl LoginServer {
         if io_state.tls_bytes_to_write() != 0 {
             client.tls.write_tls(&mut client.stream).map_err(|_| ())?;
         }
-        self.state
-            .poll
+        self.poll
             .registry()
             .reregister(
                 &mut client.stream,
@@ -164,7 +163,7 @@ impl LoginServer {
                     .into(),
                 )?;
                 self.flush_write_buffer(connection_id);
-                self.send_player_to_game_server(connection_id);
+                self.transfer_player_to_game_server(connection_id);
             }
         };
         Ok(())
@@ -172,10 +171,10 @@ impl LoginServer {
 
     pub fn close_http_client(&mut self, client_id: usize) -> Option<HttpClient> {
         if let Some(mut client) = self.http_clients.try_remove(client_id) {
-            mio::Registry::deregister(&self.state.poll.registry(), &mut client.stream).unwrap();
+            mio::Registry::deregister(&self.poll.registry(), &mut client.stream).unwrap();
             let connection = self.connections.get_mut(client.connection_id);
             if let Some(connection) = connection {
-                connection.related_http_client_id = None;
+                connection.attached_http_client_id = None;
             }
             Some(client)
         } else {

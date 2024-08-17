@@ -1,21 +1,30 @@
 use std::time::Duration;
 
-use kanal::{AsyncReceiver, Receiver};
-use mio::event::Event;
+use derive_more::derive::{Deref, DerefMut};
+use fastbuf::{Buf, ReadBuf};
+use kanal::Receiver;
+use mio::{event::Event, Interest, Poll, Token};
 use slab::Slab;
 use tick_machine::{Tick, TickState};
 
 use super::{
     connection::{Connection, ConnectionId},
     mc1_21_1::packet::game_profile::GameProfile,
-    server::ServerState,
 };
 
 pub struct GameServer {
-    state: ServerState,
+    poll: Poll,
     tick_state: TickState,
     connections: Slab<GamePlayer>,
     receiver: Receiver<(Connection, GameProfile)>,
+}
+
+#[derive(Deref, DerefMut)]
+pub struct GamePlayer {
+    game_profile: GameProfile,
+    #[deref]
+    #[deref_mut]
+    pub connection: Connection,
 }
 
 impl GameServer {
@@ -24,21 +33,22 @@ impl GameServer {
 
     pub fn new(receiver: Receiver<(Connection, GameProfile)>) -> Self {
         Self {
-            state: ServerState::new(),
             connections: Slab::with_capacity(Self::CONNECTIONS_CAPACITY),
             receiver,
             tick_state: TickState::new(Self::TICK),
+            poll: Poll::new().unwrap(),
         }
+    }
+
+    pub fn get_connection_mut(&mut self, connection_id: ConnectionId) -> &mut GamePlayer {
+        unsafe { self.connections.get_unchecked_mut(connection_id) }
     }
 
     pub fn start_loop(&mut self) -> ! {
         let mut events = mio::Events::with_capacity(Self::CONNECTIONS_CAPACITY);
         loop {
             self.try_tick();
-            self.state
-                .poll
-                .poll(&mut events, Some(Duration::ZERO))
-                .unwrap();
+            self.poll.poll(&mut events, Some(Duration::ZERO)).unwrap();
             for event in events.iter() {
                 self.on_event(event);
             }
@@ -56,26 +66,54 @@ impl GameServer {
         }
     }
 
-    fn on_connection_read(&mut self, selection_key: usize) -> Result<(), ()> {
+    fn on_connection_read(&mut self, connection_id: ConnectionId) -> Result<(), ()> {
+        let connection = self.get_connection_mut(connection_id);
+        connection.connection.read_to_buf_from_stream()?;
+        self.on_read_packet(connection_id)?;
         Ok(())
     }
 
-    fn close_connection(&mut self, connection_id: ConnectionId) {}
+    fn on_read_packet(&mut self, connection_id: ConnectionId) -> Result<(), ()> {
+        while self
+            .get_connection_mut(connection_id)
+            .connection
+            .read_buf
+            .remaining()
+            != 0
+        {
+            super::mc1_21_1::packets::handle_game_server_s_packet(self, connection_id)?;
+        }
+        let connection = unsafe { self.connections.get_unchecked_mut(connection_id) };
+        connection.connection.read_buf.clear();
+        Ok(())
+    }
+
+    fn close_connection(&mut self, connection_id: ConnectionId) {
+        if let Some(connection) = self.connections.try_remove(connection_id) {}
+    }
 }
 
 impl Tick for GameServer {
     fn try_tick(&mut self) {
         self.tick_state.try_tick(|| {
-            if let Ok(connection) = self.receiver.try_recv() {
+            if let Ok(connection) = self.receiver.try_recv_realtime() {
                 if let Some((connection, game_profile)) = connection {
                     println!("connection {:?} joined the server", game_profile.name);
+                    let connection_id = self.connections.insert(GamePlayer {
+                        game_profile,
+                        connection,
+                    });
+                    let connection = unsafe { self.connections.get_unchecked_mut(connection_id) };
+                    self.poll
+                        .registry()
+                        .register(
+                            &mut connection.stream,
+                            Token(connection_id),
+                            Interest::READABLE,
+                        )
+                        .unwrap();
                 }
             };
         });
     }
-}
-
-pub struct GamePlayer {
-    game_profile: GameProfile,
-    connection: Connection,
 }

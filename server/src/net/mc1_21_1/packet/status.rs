@@ -50,7 +50,7 @@ pub fn handle_status_request(
         }
         .into(),
     )?;
-    server.flush_write_buffer(connection_id);
+    server.flush_write_buffer(connection_id)?;
     Ok(())
 }
 

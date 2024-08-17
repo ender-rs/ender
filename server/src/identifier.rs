@@ -16,3 +16,9 @@ use crate::var_string::VarString;
     Decode,
 )]
 pub struct Identifier(VarString<32767>);
+
+impl From<&'static str> for Identifier {
+    fn from(value: &'static str) -> Self {
+        Identifier(VarString::from_str(value).unwrap())
+    }
+}

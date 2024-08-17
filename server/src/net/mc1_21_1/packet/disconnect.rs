@@ -1,6 +1,9 @@
 use packetize::{Decode, Encode};
 
-use crate::{net::{connection::ConnectionId, login_server::LoginServer}, var_string::VarString};
+use crate::{
+    net::{connection::ConnectionId, login_server::LoginServer},
+    var_string::VarString,
+};
 
 #[derive(Debug, Encode, Decode)]
 pub struct Disconnect(Box<VarString<32767>>);
