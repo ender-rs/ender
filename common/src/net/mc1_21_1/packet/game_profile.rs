@@ -1,5 +1,6 @@
-use std::ops::DerefMut;
+use std::str::FromStr;
 
+use arrayvec::ArrayString;
 use packetize::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -37,7 +38,7 @@ impl Default for GameProfile {
     fn default() -> Self {
         Self {
             id: Uuid::nil(),
-            name: VarStringCap("Unknown Player".to_string().into()).into(),
+            name: ArrayString::from_str("Unknown Player").unwrap().into(),
             properties: Vec::new(),
             profile_actions: None,
         }

@@ -1,6 +1,6 @@
 use std::{mem::MaybeUninit, str::FromStr};
 
-use arrayvec::ArrayVec;
+use arrayvec::{ArrayString, ArrayVec};
 use common::{
     array_capacitor::VarStringCap,
     net::{
@@ -250,7 +250,7 @@ pub fn handle_status_request(
                     sample: {
                         let mut vec = ArrayVec::new();
                         let value = Sample {
-                            name: VarStringCap("Notch".to_string()).into(),
+                            name: ArrayString::from_str("Notch").unwrap().into(),
                             id: Uuid::nil(),
                         };
                         unsafe { vec.push_unchecked(value) };
