@@ -1,14 +1,19 @@
+use std::ops::DerefMut;
+
 use packetize::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{player_name::PlayerName, var_string::VarString};
+use crate::{
+    array_capacitor::{VarStringCap, VarStringCap32767},
+    player_name::PlayerName,
+};
 
 #[derive(Serialize, Deserialize, Debug, Encode, Decode, Clone)]
 pub struct Property {
-    pub name: Box<VarString<32767>>,
-    pub value: Box<VarString<32767>>,
-    pub signature: Option<Box<VarString<32767>>>,
+    pub name: VarStringCap32767,
+    pub value: VarStringCap32767,
+    pub signature: Option<VarStringCap32767>,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -32,7 +37,7 @@ impl Default for GameProfile {
     fn default() -> Self {
         Self {
             id: Uuid::nil(),
-            name: VarString::from_str("Unknown Player").unwrap().into(),
+            name: VarStringCap("Unknown Player".to_string().into()).into(),
             properties: Vec::new(),
             profile_actions: None,
         }

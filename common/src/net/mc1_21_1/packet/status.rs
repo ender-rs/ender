@@ -1,13 +1,11 @@
-use std::str::FromStr;
-
-use arrayvec::{ArrayString, ArrayVec};
+use arrayvec::ArrayVec;
 use fastbuf::{ReadBuf, WriteBuf};
 use packetize::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
-    net::protocol_version::ProtocolVersion, player_name::PlayerName, var_string::VarString,
+    array_capacitor::VarStringCap, net::protocol_version::ProtocolVersion, player_name::PlayerName,
 };
 
 #[derive(Debug, Encode, Decode)]
@@ -40,7 +38,7 @@ impl Encode for StatusResponseS2c {
             Err(_) => Err(())?,
         };
         dbg!(&string);
-        VarString(ArrayString::<32767>::from_str(string.as_str()).map_err(|_| ())?).encode(buf)?;
+        VarStringCap::<32767>(string).encode(buf)?;
         Ok(())
     }
 }

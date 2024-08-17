@@ -1,7 +1,7 @@
 use packetize::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 
-use crate::var_string::VarString;
+use crate::array_capacitor::VarStringCap;
 
 #[derive(
     Debug,
@@ -15,10 +15,10 @@ use crate::var_string::VarString;
     derive_more::Deref,
     derive_more::DerefMut,
 )]
-pub struct PlayerName(pub VarString<16>);
+pub struct PlayerName(pub VarStringCap<16>);
 
 impl PlayerName {
     pub fn new() -> Self {
-        Self(VarString::new())
+        Self(VarStringCap(String::new()))
     }
 }

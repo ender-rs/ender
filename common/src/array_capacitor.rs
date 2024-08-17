@@ -2,9 +2,13 @@ use derive_more::derive::{Deref, DerefMut, From, Into};
 use fastbuf::{ReadBuf, WriteBuf};
 use fastvarint::VarInt;
 use packetize::{Decode, Encode};
+use serde::{Deserialize, Serialize};
 
-#[derive(Deref, DerefMut, Debug, Into, From)]
-pub struct VarStringCap<const CAP: usize>(String);
+#[derive(Debug, DerefMut, Deref, Serialize, Deserialize, Clone, Into, From)]
+pub struct VarStringCap<const CAP: usize>(pub String);
+
+#[derive(Debug, DerefMut, Deref, Serialize, Deserialize, Clone, Into, From, Encode, Decode)]
+pub struct VarStringCap32767(pub VarStringCap<32767>);
 
 #[derive(Deref, DerefMut, Debug, Into, From)]
 pub struct VecCap<T, const CAP: usize>(Vec<T>);
@@ -23,7 +27,6 @@ default impl<T: Encode, const CAP: usize> Encode for VecCap<T, CAP> {
 
 impl<const CAP: usize> Decode for VecCap<u8, CAP> {
     default fn decode(buf: &mut impl ReadBuf) -> Result<Self, ()> {
-        let mut vec = Vec::new();
         let (vec_len, read_len) = u32::decode_var_from_buf(buf)?;
         buf.advance(read_len);
         let vec_len = vec_len as usize;
@@ -35,6 +38,7 @@ impl<const CAP: usize> Decode for VecCap<u8, CAP> {
             dbg!(CAP < vec_len, CAP, vec_len);
             Err(())?
         }
+        let mut vec = Vec::with_capacity(vec_len);
         unsafe { vec.set_len(vec_len) };
         vec.as_mut_slice().copy_from_slice(buf.read(vec_len));
         Ok(VecCap(vec))
@@ -59,7 +63,6 @@ default impl<T: Encode, const CAP: usize> Encode for VecCap<T, CAP> {
 
 impl<T: Decode, const CAP: usize> Decode for VecCap<T, CAP> {
     default fn decode(buf: &mut impl ReadBuf) -> Result<Self, ()> {
-        let mut vec = Vec::new();
         let (vec_len, read_len) = u32::decode_var_from_buf(buf)?;
         buf.advance(read_len);
         let vec_len = vec_len as usize;
@@ -68,6 +71,7 @@ impl<T: Decode, const CAP: usize> Decode for VecCap<T, CAP> {
             dbg!(CAP < vec_len, CAP, vec_len);
             Err(())?
         }
+        let mut vec = Vec::with_capacity(vec_len);
         unsafe { vec.set_len(vec_len) };
         for i in 0..vec_len {
             *unsafe { vec.get_unchecked_mut(i) } = T::decode(buf)?;
@@ -78,7 +82,6 @@ impl<T: Decode, const CAP: usize> Decode for VecCap<T, CAP> {
 
 impl<const CAP: usize> Decode for VarStringCap<CAP> {
     fn decode(buf: &mut impl ReadBuf) -> Result<Self, ()> {
-        let mut vec = Vec::new();
         let (string_len, read_len) = u32::decode_var_from_buf(buf)?;
         buf.advance(read_len);
         let string_len = string_len as usize;
@@ -90,6 +93,7 @@ impl<const CAP: usize> Decode for VarStringCap<CAP> {
             dbg!(CAP < string_len, CAP, string_len);
             Err(())?
         }
+        let mut vec = Vec::with_capacity(string_len);
         unsafe { vec.set_len(string_len) };
         vec.as_mut_slice().copy_from_slice(buf.read(string_len));
         Ok(unsafe { VarStringCap(String::from_utf8_unchecked(vec)) })

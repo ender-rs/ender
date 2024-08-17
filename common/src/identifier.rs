@@ -1,7 +1,7 @@
 use packetize::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 
-use crate::var_string::VarString;
+use crate::array_capacitor::VarStringCap;
 
 #[derive(
     Debug,
@@ -15,10 +15,10 @@ use crate::var_string::VarString;
     Encode,
     Decode,
 )]
-pub struct Identifier(VarString<32767>);
+pub struct Identifier(VarStringCap<32767>);
 
 impl From<&'static str> for Identifier {
     fn from(value: &'static str) -> Self {
-        Identifier(VarString::from_str(value).unwrap())
+        Identifier(VarStringCap(value.to_string()))
     }
 }

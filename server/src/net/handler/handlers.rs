@@ -2,6 +2,7 @@ use std::{mem::MaybeUninit, str::FromStr};
 
 use arrayvec::ArrayVec;
 use common::{
+    array_capacitor::VarStringCap,
     net::{
         mc1_21_1::{
             packet::{
@@ -16,16 +17,14 @@ use common::{
                 plugin_message::PluginMessage,
                 set_compression::SetCompressionS2c,
                 status::{
-                    Description, Players, Sample, Status, StatusRequestC2s, StatusResponseS2c,
-                    Version,
+                    Description, PingRequestC2s, PingResponseS2c, Players, Sample, Status,
+                    StatusRequestC2s, StatusResponseS2c, Version,
                 },
-                status::{PingRequestC2s, PingResponseS2c},
             },
             packets::Mc1_21_1ConnectionState,
         },
         protocol_version::ProtocolVersion,
     },
-    var_string::VarString,
 };
 use num_bigint::BigInt;
 use rsa::Pkcs1v15Encrypt;
@@ -189,7 +188,7 @@ pub fn handle_login_start(
     server.send_packet(
         connection_id,
         &EncryptionRequestS2c {
-            server_id: VarString::from_str("").unwrap(),
+            server_id: VarStringCap("".to_string()),
             public_key,
             verify_token: verify_token_array,
             should_authenticate: true,
@@ -251,7 +250,7 @@ pub fn handle_status_request(
                     sample: {
                         let mut vec = ArrayVec::new();
                         let value = Sample {
-                            name: VarString::from_str("Notch").unwrap().into(),
+                            name: VarStringCap("Notch".to_string()).into(),
                             id: Uuid::nil(),
                         };
                         unsafe { vec.push_unchecked(value) };

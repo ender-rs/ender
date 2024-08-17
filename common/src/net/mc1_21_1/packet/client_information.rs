@@ -1,11 +1,11 @@
 use bitflags::bitflags;
 use packetize::{Decode, Encode};
 
-use crate::var_string::VarString;
+use crate::array_capacitor::VarStringCap;
 
 #[derive(Debug, Encode, Decode)]
 pub struct ClientInformationC2s {
-    locale: VarString<16>,
+    locale: VarStringCap<16>,
     view_distance: u8,
     chat_mode: ChatMode,
     chat_colors: bool,
