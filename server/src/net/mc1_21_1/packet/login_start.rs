@@ -7,7 +7,8 @@ use uuid::Uuid;
 
 use crate::{
     net::{
-        login_server::{ConnectionId, LoginServer},
+        connection::ConnectionId,
+        login_server::LoginServer,
         mc1_21_1::packet::{encryption::EncryptionRequestS2c, set_compression::SetCompressionS2c},
     },
     player_name::PlayerName,

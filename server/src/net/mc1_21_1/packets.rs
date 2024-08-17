@@ -1,6 +1,6 @@
 use packetize::{streaming_packets, ServerBoundPacketStream};
 
-use crate::net::login_server::{ConnectionId, LoginServer};
+use crate::net::{connection::ConnectionId, login_server::LoginServer};
 
 use super::packet::{
     client_information::{handle_client_information, ClientInformationC2s},
@@ -65,7 +65,7 @@ pub enum Mc1_21_1ConnectionState {
 }
 
 pub fn handle_packet(server: &mut LoginServer, connection_id: ConnectionId) -> Result<(), ()> {
-    let connection = server.get_connection_mut(connection_id);
+    let connection = &mut server.get_connection_mut(connection_id).connection;
     match connection
         .state
         .decode_server_bound_packet(&mut connection.read_buf, &mut connection.stream_state)?

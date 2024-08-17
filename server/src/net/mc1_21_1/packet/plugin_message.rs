@@ -4,10 +4,7 @@ use arrayvec::ArrayVec;
 use derive_more::derive::{Deref, DerefMut};
 use packetize::{Decode, Encode};
 
-use crate::{
-    identifier::Identifier,
-    net::login_server::{ConnectionId, LoginServer},
-};
+use crate::{identifier::Identifier, net::{connection::ConnectionId, login_server::LoginServer}};
 
 #[derive(Debug)]
 pub struct PluginMessage {

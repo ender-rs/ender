@@ -5,10 +5,7 @@ use rsa::Pkcs1v15Encrypt;
 use sha1::{Digest, Sha1};
 
 use crate::{
-    net::{
-        http_client::HttpRequestEvent,
-        login_server::{ConnectionId, LoginServer},
-    },
+    net::{connection::ConnectionId, http_client::HttpRequestEvent, login_server::LoginServer},
     var_string::VarString,
 };
 

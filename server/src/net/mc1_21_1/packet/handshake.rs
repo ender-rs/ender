@@ -6,9 +6,8 @@ use packetize::{Decode, Encode};
 
 use crate::{
     net::{
-        login_server::{ConnectionId, LoginServer},
-        mc1_21_1::packets::Mc1_21_1ConnectionState,
-        protocol_version::ProtocolVersion,
+        connection::ConnectionId, login_server::LoginServer,
+        mc1_21_1::packets::Mc1_21_1ConnectionState, protocol_version::ProtocolVersion,
     },
     var_int::VarInt,
 };
@@ -48,7 +47,7 @@ pub fn handle_handshake(
     handshake: &HandShakeC2s,
 ) -> Result<(), ()> {
     let connection = server.get_connection_mut(connection_id);
-    connection.state = match handshake.next_state {
+    connection.connection.state = match handshake.next_state {
         NextState::Status => Mc1_21_1ConnectionState::Status,
         NextState::Login => Mc1_21_1ConnectionState::Login,
         NextState::Transfer => todo!(),

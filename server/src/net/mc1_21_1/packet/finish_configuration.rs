@@ -1,6 +1,6 @@
 use packetize::{Decode, Encode};
 
-use crate::net::login_server::{ConnectionId, LoginServer};
+use crate::net::{connection::ConnectionId, login_server::LoginServer};
 
 #[derive(Encode, Decode, Debug)]
 pub struct FinishConfigurationS2c;

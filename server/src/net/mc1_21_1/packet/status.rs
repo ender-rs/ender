@@ -6,10 +6,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
-    net::{
-        login_server::{ConnectionId, LoginServer},
-        protocol_version::ProtocolVersion,
-    },
+    net::{connection::ConnectionId, login_server::LoginServer, protocol_version::ProtocolVersion},
     player_name::PlayerName,
     var_string::VarString,
 };

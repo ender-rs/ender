@@ -2,7 +2,7 @@ use bitflags::bitflags;
 use packetize::{Decode, Encode};
 
 use crate::{
-    net::login_server::{ConnectionId, LoginServer},
+    net::{connection::ConnectionId, login_server::LoginServer},
     var_string::VarString,
 };
 

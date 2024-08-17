@@ -9,7 +9,7 @@ use nonmax::NonMaxUsize;
 
 use crate::net::mc1_21_1::packet::{game_profile::GameProfile, login_success::LoginSuccessS2c};
 
-use super::login_server::{ConnectionId, LoginServer};
+use super::{connection::ConnectionId, login_server::LoginServer};
 
 pub struct HttpClient {
     pub event: HttpRequestEvent,
@@ -164,18 +164,22 @@ impl LoginServer {
                     .into(),
                 )?;
                 self.flush_write_buffer(connection_id);
+                self.send_player_to_game_server(connection_id);
             }
         };
         Ok(())
     }
 
-    pub fn close_http_client(&mut self, client_id: usize) -> HttpClient {
-        let mut client = self.http_clients.remove(client_id);
-        mio::Registry::deregister(&self.state.poll.registry(), &mut client.stream).unwrap();
-        let connection = self.connections.get_mut(client.connection_id);
-        if let Some(connection) = connection {
-            connection.related_http_client_id = None;
+    pub fn close_http_client(&mut self, client_id: usize) -> Option<HttpClient> {
+        if let Some(mut client) = self.http_clients.try_remove(client_id) {
+            mio::Registry::deregister(&self.state.poll.registry(), &mut client.stream).unwrap();
+            let connection = self.connections.get_mut(client.connection_id);
+            if let Some(connection) = connection {
+                connection.related_http_client_id = None;
+            }
+            Some(client)
+        } else {
+            None
         }
-        client
     }
 }
