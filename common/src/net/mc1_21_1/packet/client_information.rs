@@ -53,5 +53,3 @@ pub enum ChatMode {
     CommandOnly = 1,
     Hidden = 2,
 }
-
-

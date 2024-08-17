@@ -6,9 +6,18 @@ use crate::player_name::PlayerName;
 use super::game_profile::Property;
 
 #[derive(Debug, Encode, Decode)]
+pub struct LoginStartC2s {
+    pub name: PlayerName,
+    pub uuid: Uuid,
+}
+
+#[derive(Debug, Encode, Decode)]
 pub struct LoginSuccessS2c {
     pub uuid: Uuid,
     pub username: PlayerName,
     pub properties: Vec<Property>,
     pub strict_error_handling: bool,
 }
+
+#[derive(Debug, Encode, Decode)]
+pub struct LoginAckC2s;

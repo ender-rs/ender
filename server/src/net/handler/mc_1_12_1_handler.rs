@@ -3,7 +3,11 @@ use packetize::ServerBoundPacketStream;
 
 use crate::net::{connection::ConnectionId, game_server::GameServer, login_server::LoginServer};
 
-use super::handlers::{handle_client_information, handle_encryption_response, handle_finish_configuration_ack, handle_handshake, handle_known_packs, handle_login_ack, handle_login_start, handle_ping_request, handle_plugin_message, handle_status_request};
+use super::handlers::{
+    handle_client_information, handle_encryption_response, handle_finish_configuration_ack,
+    handle_handshake, handle_known_packs, handle_login_ack, handle_login_start,
+    handle_ping_request, handle_plugin_message, handle_status_request,
+};
 
 pub fn handle_login_server_s_packet(
     server: &mut LoginServer,

@@ -12,15 +12,14 @@ use common::{
                 finish_configuration::FinishConfigurationAckC2s,
                 handshake::{HandShakeC2s, NextState},
                 known_packs::KnownPacks,
-                login_ack::LoginAckC2s,
-                login_start::LoginStartC2s,
-                ping::{PingRequestC2s, PingResponseS2c},
+                login::{LoginAckC2s, LoginStartC2s},
                 plugin_message::PluginMessage,
                 set_compression::SetCompressionS2c,
                 status::{
                     Description, Players, Sample, Status, StatusRequestC2s, StatusResponseS2c,
                     Version,
                 },
+                status::{PingRequestC2s, PingResponseS2c},
             },
             packets::Mc1_21_1ConnectionState,
         },
@@ -197,7 +196,7 @@ pub fn handle_login_start(
         }
         .into(),
     )?;
-    server.flush_write_buffer(connection_id);
+    server.flush_write_buffer(connection_id)?;
 
     dbg!("Success send encrypt request");
     let connection = server.get_connection_mut(connection_id);
@@ -218,7 +217,7 @@ fn send_set_compression_packet(
         }
         .into(),
     )?;
-    server.flush_write_buffer(connection_id);
+    server.flush_write_buffer(connection_id)?;
     server.enable_compression(connection_id, DEFAULT_COMPRESSION_THRESHOLD)?;
     Ok(())
 }

@@ -1,9 +1,12 @@
 use std::{io::Read, mem::MaybeUninit};
 
 use cfb8::{Decryptor, Encryptor};
-use common::{net::mc1_21_1::packets::{ClientBoundPacket, Mc1_21_1ConnectionState}, packet_format::MinecraftPacketFormat};
+use common::{
+    net::mc1_21_1::packets::{ClientBoundPacket, Mc1_21_1ConnectionState},
+    packet_format::MinecraftPacketFormat,
+};
 use fastbuf::{Buf, Buffer, ReadBuf, ReadToBuf, WriteBuf};
-use mio::{Poll, Registry};
+use mio::Registry;
 use packetize::ClientBoundPacketStream;
 
 use super::{cryptic, login_server::PACKET_BYTE_BUFFER_LENGTH};

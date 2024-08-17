@@ -1,6 +1,7 @@
 use std::str::FromStr;
 
 use arrayvec::{ArrayString, ArrayVec};
+use fastbuf::{ReadBuf, WriteBuf};
 use packetize::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -17,14 +18,23 @@ pub struct StatusResponseS2c {
     pub status: Status,
 }
 
+#[derive(Debug, Encode, Decode)]
+pub struct PingRequestC2s {
+    pub payload: i64,
+}
+
+#[derive(Debug, Encode, Decode)]
+pub struct PingResponseS2c {
+    pub payload: i64,
+}
 impl Decode for StatusResponseS2c {
-    fn decode(_buf: &mut impl fastbuf::ReadBuf) -> Result<Self, ()> {
+    fn decode(_buf: &mut impl ReadBuf) -> Result<Self, ()> {
         todo!()
     }
 }
 
 impl Encode for StatusResponseS2c {
-    fn encode(&self, buf: &mut impl fastbuf::WriteBuf) -> Result<(), ()> {
+    fn encode(&self, buf: &mut impl WriteBuf) -> Result<(), ()> {
         let string = match simd_json::serde::to_string(&self.status) {
             Ok(v) => v,
             Err(_) => Err(())?,

@@ -1,4 +1,4 @@
-use packetize::{streaming_packets, ServerBoundPacketStream};
+use packetize::streaming_packets;
 
 use super::packet::{
     client_information::ClientInformationC2s,
@@ -8,15 +8,13 @@ use super::packet::{
     finish_configuration::{FinishConfigurationAckC2s, FinishConfigurationS2c},
     handshake::HandShakeC2s,
     known_packs::{KnownPacksC2s, KnownPacksS2c},
-    login_ack::LoginAckC2s,
-    login_start::LoginStartC2s,
-    login_success::LoginSuccessS2c,
-    ping::{PingRequestC2s, PingResponseS2c},
+    login::{LoginAckC2s, LoginStartC2s, LoginSuccessS2c},
     plugin_message::{
         PluginMessageConfC2s, PluginMessageConfS2c, PluginMessagePlayC2s, PluginMessagePlayS2c,
     },
     registry_data::RegistryDataS2c,
     set_compression::SetCompressionS2c,
+    status::{PingRequestC2s, PingResponseS2c},
     status::{StatusRequestC2s, StatusResponseS2c},
 };
 
@@ -60,4 +58,3 @@ pub enum Mc1_21_1ConnectionState {
         #[id(0x12)] PluginMessagePlayC2s,
     ),
 }
-

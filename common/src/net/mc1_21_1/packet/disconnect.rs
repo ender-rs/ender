@@ -7,4 +7,3 @@ pub struct Disconnect(Box<VarString<32767>>);
 
 #[derive(Debug, Encode, Decode)]
 pub struct LoginDisconnectS2c(Disconnect);
-
