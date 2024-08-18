@@ -1,20 +1,21 @@
-use std::{net::SocketAddr, str::FromStr};
+use std::{mem::MaybeUninit, net::SocketAddr, str::FromStr};
 
 use arrayvec::ArrayString;
-use common::net::{
-    connection::Connection,
-    mc1_21_1::{
-        packet::{
-            client_info::{ChatMode, ClientInformationC2s, DisplaySkinParts, MainHand},
-            feature_flags::FeatureFlagsS2c,
-            handshake::{HandShakeC2s, NextState},
-            known_packs::{KnownPack, KnownPacks, KnownPacksC2s},
-            login::{LoginAckC2s, LoginStartC2s},
-            plugin_message::{PluginMessage, PluginMessageConfC2s},
+use common::{
+    net::{
+        connection::Connection,
+        mc1_21_1::{
+            packet::{
+                client_info::{ChatMode, ClientInformationC2s, DisplaySkinParts, MainHand},
+                handshake::{HandShakeC2s, NextState},
+                known_packs::{KnownPack, KnownPacks, KnownPacksC2s},
+                login::{LoginAckC2s, LoginStartC2s},
+            },
+            packets::{ClientBoundPacket, Mc1_21_1ConnectionState},
         },
-        packets::{ClientBoundPacket, Mc1_21_1ConnectionState},
+        protocol_version::ProtocolVersion,
     },
-    protocol_version::ProtocolVersion,
+    packet_format::PACKET_BYTE_BUFFER_LENGTH,
 };
 use fastbuf::ReadBuf;
 use mio::net::TcpStream;
@@ -25,7 +26,7 @@ use uuid::Uuid;
 pub enum Error {
     TcpStreamConnectError,
     AddressParsingError,
-    ReadToBufFromStreamAlsoMaybeConnectionClosedError,
+    ReadToBufFromStreamError,
     SendPacketError,
     DecodePacketError,
     FlushWriteBufferError,
@@ -65,15 +66,25 @@ fn main() -> Result<(), Error> {
     connection
         .flush_write_buffer()
         .map_err(|_| Error::FlushWriteBufferError)?;
+    #[allow(invalid_value)]
+    let ref mut temp_buf =
+        unsafe { MaybeUninit::<[u8; PACKET_BYTE_BUFFER_LENGTH]>::uninit().assume_init() };
     loop {
-        read(&mut connection)?;
+        match read(&mut connection, temp_buf) {
+            Ok(_) => {}
+            Err(Error::DecodePacketError) => {}
+            Err(err) => Err(err)?,
+        };
     }
 }
 
-fn read(connection: &mut Connection) -> Result<(), Error> {
+fn read(
+    connection: &mut Connection,
+    temp_buf: &mut [u8; PACKET_BYTE_BUFFER_LENGTH],
+) -> Result<(), Error> {
     connection
-        .read_to_buf_from_stream()
-        .map_err(|_| Error::ReadToBufFromStreamAlsoMaybeConnectionClosedError)?;
+        .read_to_buf_from_stream(temp_buf)
+        .map_err(|_| Error::ReadToBufFromStreamError)?;
     while connection.read_buf.remaining() != 0 {
         let packet = connection
             .state
@@ -140,8 +151,9 @@ fn read(connection: &mut Connection) -> Result<(), Error> {
                 println!("{known_packs:?}");
             }
             ClientBoundPacket::RegistryDataS2c(registry_data) => {
+                println!("registry_data!!");
                 println!("{registry_data:?}");
-            },
+            }
             ClientBoundPacket::PluginMessagePlayS2c(_) => todo!(),
             ClientBoundPacket::UpdateTagsS2c(update_tags) => {
                 println!("{update_tags:?}");

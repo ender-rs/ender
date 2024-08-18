@@ -4,7 +4,6 @@ use crate::{identifier::Identifier, var_int::VarInt};
 
 #[derive(Debug, Encode, Decode)]
 pub struct UpdateTagsS2c {
-    registry: Identifier,
     tags: Vec<Tags>,
 }
 

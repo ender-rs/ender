@@ -243,6 +243,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "cesu8"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6d43a04d8753f35258c91f8ec639f792891f748a1edbd759cf1dcea3382ad83c"
+
+[[package]]
 name = "cexpr"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -398,6 +404,7 @@ dependencies = [
  "serde",
  "sha1",
  "simd-json",
+ "simdnbt",
  "slab",
  "tick-machine",
  "ufmt",
@@ -608,6 +615,7 @@ name = "ender"
 version = "0.1.0"
 dependencies = [
  "divan",
+ "fastnbt",
  "server",
 ]
 
@@ -628,6 +636,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4d9ead7a585cdef0d3ff8b1c28e63b1c3aff45aa71fe28a8e920304398ec6ffc"
 dependencies = [
  "varuint",
+]
+
+[[package]]
+name = "fastnbt"
+version = "2.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7d4a73a95dc65551ccd98e1ecd1adb5d1ba5361146963b31f481ca42fc0520a3"
+dependencies = [
+ "byteorder",
+ "cesu8",
+ "serde",
+ "serde_bytes",
 ]
 
 [[package]]
@@ -1224,9 +1244,9 @@ dependencies = [
 
 [[package]]
 name = "packetize"
-version = "0.94.0"
+version = "0.95.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "11f9db73ef84c09bb9ea2cc69b848650d1a9a99445f39863c1b2bff7c24a669f"
+checksum = "bf9ac2449324fa17dbab9914c889da8a3d469ae401350ed3ed52b821afc53c8d"
 dependencies = [
  "arrayvec",
  "fastbuf",
@@ -1239,9 +1259,9 @@ dependencies = [
 
 [[package]]
 name = "packetize_derive"
-version = "0.94.0"
+version = "0.95.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc33db43fdf902d88e2802dd6d8045d35d584c224cf0469e733bf04527a93c58"
+checksum = "f16da86ca0bc36b133fb2b6411f051b95cc146e143b89152327b5b6aa0fc71b8"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1449,6 +1469,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a66a03ae7c801facd77a29370b4faec201768915ac14a721ba36f20bc9c209b"
 
 [[package]]
+name = "residua-cesu8"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6ca29b145d9861719b5505602d881afc46705200144153ca9dbc0802be2938ea"
+
+[[package]]
+name = "residua-mutf8"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2adba843a48e520e7dad6d1e9c367a4f818787eaccf4530c6b90dd1f035e630d"
+dependencies = [
+ "residua-cesu8",
+]
+
+[[package]]
 name = "ring"
 version = "0.17.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1623,6 +1658,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde_bytes"
+version = "0.11.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "387cc504cb06bb40a96c8e04e951fe01854cf6bc921053c954e4a606d9675c6a"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "serde_derive"
 version = "1.0.208"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1680,6 +1724,7 @@ dependencies = [
  "serde",
  "sha1",
  "simd-json",
+ "simdnbt",
  "slab",
  "tick-machine",
  "ufmt",
@@ -1728,6 +1773,31 @@ dependencies = [
  "serde_json",
  "simdutf8",
  "value-trait",
+]
+
+[[package]]
+name = "simdnbt"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7873e74b45488cc8b44a7c0ffc40c156b36402b6001272ab6b301d4e641f185d"
+dependencies = [
+ "byteorder",
+ "flate2",
+ "residua-mutf8",
+ "simdnbt-derive",
+ "thiserror",
+ "valence_nbt",
+]
+
+[[package]]
+name = "simdnbt-derive"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "10dbcddd4df92d15834757fb1f61ececc00840b96a2d7b0daf09aef596628c00"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.74",
 ]
 
 [[package]]
@@ -1989,6 +2059,16 @@ checksum = "81dfa00651efa65069b0b6b651f4aaa31ba9e3c3ce0137aaad053604ee7e0314"
 dependencies = [
  "getrandom",
  "serde",
+]
+
+[[package]]
+name = "valence_nbt"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c3cddc3222ed5ead4fa446881b3deeeee0dba60b0088b2bf12fedbac7eda2312"
+dependencies = [
+ "byteorder",
+ "cesu8",
 ]
 
 [[package]]

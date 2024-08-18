@@ -1,4 +1,4 @@
-use std::{io::Read, mem::MaybeUninit};
+use std::{io::Read, iter::Inspect, mem::MaybeUninit, time::Instant};
 
 use crate::{
     net::mc1_21_1::packets::{ClientBoundPacket, Mc1_21_1ConnectionState},
@@ -42,17 +42,18 @@ impl Connection {
         }
     }
 
-    pub fn read_to_buf_from_stream(&mut self) -> Result<(), ()> {
+    pub fn read_to_buf_from_stream(
+        &mut self,
+        temp_buf: &mut [u8; PACKET_BYTE_BUFFER_LENGTH],
+    ) -> Result<(), ()> {
         if let Some(ref mut cipher) = &mut self.d_cipher {
             #[allow(invalid_value)]
-            let mut buf =
-                unsafe { MaybeUninit::<[u8; PACKET_BYTE_BUFFER_LENGTH]>::uninit().assume_init() };
-            let read_length = self.stream.read(&mut buf).map_err(|_| ())?;
+            let read_length = self.stream.read(temp_buf).map_err(|_| ())?;
             if read_length == 0 {
                 return Err(());
             }
 
-            let buf = &mut buf[..read_length];
+            let buf = &mut temp_buf[..read_length];
             cryptic::decrypt(cipher, buf);
             self.read_buf.try_write(buf)?;
         } else {

@@ -5,6 +5,15 @@ fn main() {
     let (sender, receiver) = unbounded();
     let mut login_server = LoginServer::new(sender);
     let mut game_server = GameServer::new(receiver);
-    std::thread::spawn(move || game_server.start_loop());
-    login_server.start_loop()
+    std::thread::Builder::new()
+        .stack_size(256 * 1024 * 1024)
+        .spawn(move || game_server.start_loop())
+        .unwrap();
+
+    std::thread::Builder::new()
+        .stack_size(256 * 1024 * 1024)
+        .spawn(move || login_server.start_loop())
+        .unwrap()
+        .join()
+        .unwrap();
 }

@@ -1,6 +1,8 @@
-use std::time::Duration;
+use std::{mem::MaybeUninit, time::Duration};
 
-use common::net::mc1_21_1::packet::game_profile::GameProfile;
+use common::{
+    net::mc1_21_1::packet::game_profile::GameProfile, packet_format::PACKET_BYTE_BUFFER_LENGTH,
+};
 use derive_more::derive::{Deref, DerefMut};
 use fastbuf::{Buf, ReadBuf};
 use kanal::Receiver;
@@ -12,6 +14,7 @@ use common::net::connection::{Connection, ConnectionId};
 
 pub struct GameServer {
     poll: Poll,
+    temp_buf: Box<[u8; PACKET_BYTE_BUFFER_LENGTH]>,
     tick_state: TickState,
     connections: Slab<GamePlayer>,
     receiver: Receiver<(Connection, GameProfile)>,
@@ -31,10 +34,12 @@ impl GameServer {
 
     pub fn new(receiver: Receiver<(Connection, GameProfile)>) -> Self {
         Self {
-            connections: Slab::with_capacity(Self::CONNECTIONS_CAPACITY),
+            connections: Slab::new(),
             receiver,
             tick_state: TickState::new(Self::TICK),
             poll: Poll::new().unwrap(),
+            #[allow(invalid_value)]
+            temp_buf: Box::new(unsafe { MaybeUninit::uninit().assume_init() }),
         }
     }
 
@@ -65,8 +70,10 @@ impl GameServer {
     }
 
     fn on_connection_read(&mut self, connection_id: ConnectionId) -> Result<(), ()> {
-        let connection = self.get_connection_mut(connection_id);
-        connection.connection.read_to_buf_from_stream()?;
+        let connection = unsafe { self.connections.get_unchecked_mut(connection_id) };
+        connection
+            .connection
+            .read_to_buf_from_stream(&mut self.temp_buf)?;
         self.on_read_packet(connection_id)?;
         Ok(())
     }

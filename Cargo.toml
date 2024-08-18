@@ -8,13 +8,15 @@ members = ["server", "client", "common"]
 resolver = "2"
 
 [dependencies]
+fastnbt = "2.5.0"
 server = { path = "./server" }
 
 [dev-dependencies]
 divan = "0.1.14"
 
 [workspace.dependencies]
-packetize = "0.94.0"
+simdnbt = "0.6.0"
+packetize = "0.95.0"
 fastvarint = "0.10.0"
 fastbuf = "0.25.0" 
 

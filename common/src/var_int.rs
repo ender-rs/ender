@@ -1,4 +1,4 @@
-use derive_more::derive::{Deref, DerefMut, Display, From, Into};
+use derive_more::derive::{Debug, Deref, DerefMut, Display, From, Into};
 use fastbuf::{ReadBuf, WriteBuf};
 use nonmax::NonMaxI32;
 use packetize::{Decode, Encode};

@@ -1,6 +1,8 @@
 use std::{mem::MaybeUninit, time::Duration};
 
-use common::net::mc1_21_1::packet::game_profile::GameProfile;
+use common::{
+    net::mc1_21_1::packet::game_profile::GameProfile, packet_format::PACKET_BYTE_BUFFER_LENGTH,
+};
 use derive_more::derive::{Deref, DerefMut};
 use fastbuf::{Buf, ReadBuf};
 use kanal::Sender;
@@ -15,11 +17,9 @@ use common::net::{
 
 use super::http_client::HttpClient;
 
-pub const PACKET_BYTE_BUFFER_LENGTH: usize = 4096;
-pub const MAX_PACKET_SIZE: i32 = 2097152;
-
 pub struct LoginServer {
     pub info: CrypticState,
+    pub temp_buf: Box<[u8; PACKET_BYTE_BUFFER_LENGTH]>,
     pub poll: Poll,
     pub connections: Slab<LoginConnection>,
     listener: TcpListener,
@@ -59,10 +59,12 @@ impl LoginServer {
         Self {
             listener,
             poll,
-            connections: Slab::with_capacity(Self::CONNECTIONS_CAPACITY),
+            connections: Slab::new(),
             info: CrypticState::new(),
-            http_clients: Slab::with_capacity(Self::HTTP_REQUESTS_CAPACITY),
+            http_clients: Slab::new(),
             game_player_sender,
+            #[allow(invalid_value)]
+            temp_buf: Box::new(unsafe { MaybeUninit::uninit().assume_init() }),
         }
     }
 
@@ -136,8 +138,10 @@ impl LoginServer {
     }
 
     fn on_connection_read(&mut self, connection_id: ConnectionId) -> Result<(), ()> {
-        let connection = self.get_connection_mut(connection_id);
-        connection.state.read_to_buf_from_stream()?;
+        let connection = unsafe { self.connections.get_unchecked_mut(connection_id) };
+        connection
+            .state
+            .read_to_buf_from_stream(&mut self.temp_buf)?;
         self.on_read_packet(connection_id)?;
         Ok(())
     }
