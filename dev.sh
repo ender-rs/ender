@@ -1,1 +1,0 @@
-cargo r -p server
