@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use derive_more::derive::{Deref, DerefMut, From, Into};
 use fastbuf::{ReadBuf, WriteBuf};
 use fastvarint::VarInt;
@@ -111,5 +113,23 @@ impl<const CAP: usize> Encode for VarStringCap<CAP> {
 impl<const CAP: usize> From<&[u8]> for VecCap<u8, CAP> {
     fn from(value: &[u8]) -> Self {
         VecCap(Vec::from(value))
+    }
+}
+
+impl<const CAP: usize> From<&'static str> for VarStringCap<CAP> {
+    fn from(value: &'static str) -> Self {
+        VarStringCap(String::from_str(value).unwrap())
+    }
+}
+
+impl From<&'static str> for VarStringCap32767 {
+    fn from(value: &'static str) -> Self {
+        VarStringCap32767(VarStringCap(String::from_str(value).unwrap()))
+    }
+}
+
+impl From<String> for VarStringCap32767 {
+    fn from(value: String) -> Self {
+        VarStringCap32767(VarStringCap(value))
     }
 }

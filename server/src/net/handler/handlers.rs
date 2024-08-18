@@ -13,7 +13,7 @@ use common::{
                 feature_flags::FeatureFlagsS2c,
                 finish_configuration::FinishConfigurationAckC2s,
                 handshake::{HandShakeC2s, NextState},
-                known_packs::KnownPacks,
+                known_packs::{KnownPack, KnownPacks, KnownPacksS2c},
                 login::{LoginAckC2s, LoginStartC2s},
                 plugin_message::PluginMessage,
                 set_compression::SetCompressionS2c,
@@ -133,6 +133,7 @@ pub fn handle_known_packs(
     connection_id: ConnectionId,
     known_packs: &KnownPacks,
 ) -> Result<(), ()> {
+    println!("{known_packs:?}");
     Ok(())
 }
 
@@ -149,6 +150,17 @@ pub fn handle_login_ack(
         }
         .into(),
     )?;
+    connection.send_packet_to_client(
+        &KnownPacksS2c(KnownPacks {
+            known_packs: vec![KnownPack {
+                namespace: "minecraft".into(),
+                id: "core".into(),
+                version: ProtocolVersion::Mc1_21_1.to_string().into(),
+            }],
+        })
+        .into(),
+    )?;
+
     connection.flush_write_buffer()?;
     Ok(())
 }
@@ -168,7 +180,7 @@ pub fn handle_login_start(
 
     dbg!(public_key_der.len());
 
-    let mut public_key = ArrayVec::<u8, 161>::new();
+    let mut public_key = ArrayVec::<u8, 162>::new();
     unsafe {
         std::ptr::copy_nonoverlapping(
             public_key_der.as_ptr(),

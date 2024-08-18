@@ -12,8 +12,9 @@ bytes = "1.7.1"
 cfb8 = "0.8.1"
 derive_more = { version = "1.0.0", features = ["full"] }
 dns-lookup = "2.0.4"
-fastbuf = "0.24.0"
-fastvarint = "0.9.0"
+fastbuf.workspace = true
+fastvarint.workspace = true
+packetize.workspace = true
 flate2 = "1.0.31"
 get_if_addrs = "0.5.3"
 httparse = "1.9.4"
@@ -39,4 +40,3 @@ tick-machine = "0.5.0"
 ufmt = { version = "0.2.0", features = ["std"] }
 uuid = { version = "1.10.0", features = ["serde"] }
 webpki-roots = "0.26.3"
-packetize = "0.90.0"

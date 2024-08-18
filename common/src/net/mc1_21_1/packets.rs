@@ -14,8 +14,8 @@ use super::packet::{
     },
     registry_data::RegistryDataS2c,
     set_compression::SetCompressionS2c,
-    status::{PingRequestC2s, PingResponseS2c},
-    status::{StatusRequestC2s, StatusResponseS2c},
+    status::{PingRequestC2s, PingResponseS2c, StatusRequestC2s, StatusResponseS2c},
+    update_tags::UpdateTagsS2c,
 };
 
 #[streaming_packets]
@@ -52,6 +52,7 @@ pub enum Mc1_21_1ConnectionState {
         #[id(0x0E)] KnownPacksS2c,
         #[id(0x07)] KnownPacksC2s,
         #[id(0x07)] RegistryDataS2c,
+        #[id(0x0D)] UpdateTagsS2c,
     ),
     Play(
         #[id(0x19)] PluginMessagePlayS2c,

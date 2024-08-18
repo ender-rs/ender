@@ -5,14 +5,14 @@ use crate::array_capacitor::VarStringCap;
 
 #[derive(Debug, Encode, Decode)]
 pub struct ClientInformationC2s {
-    locale: VarStringCap<16>,
-    view_distance: u8,
-    chat_mode: ChatMode,
-    chat_colors: bool,
-    display_skin_parts: DisplaySkinParts,
-    main_hand: MainHand,
-    enable_text_filtering: bool,
-    allow_server_listings: bool,
+    pub locale: VarStringCap<16>,
+    pub view_distance: u8,
+    pub chat_mode: ChatMode,
+    pub chat_colors: bool,
+    pub display_skin_parts: DisplaySkinParts,
+    pub main_hand: MainHand,
+    pub enable_text_filtering: bool,
+    pub allow_server_listings: bool,
 }
 
 bitflags! {
@@ -25,7 +25,7 @@ bitflags! {
         const LeftPantsLeg = 0x10;
         const RightPantsLeg = 0x20;
         const Hat = 0x40;
-        const _Unused = 0x80;
+        //const _Unused = 0x80;
     }
 }
 

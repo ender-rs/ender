@@ -4,19 +4,19 @@ use packetize::{Decode, Encode};
 use crate::array_capacitor::VarStringCap32767;
 
 #[derive(Debug, Encode, Decode, Deref, DerefMut)]
-pub struct KnownPacksS2c(KnownPacks);
+pub struct KnownPacksS2c(pub KnownPacks);
 
 #[derive(Debug, Encode, Decode, Deref, DerefMut)]
-pub struct KnownPacksC2s(KnownPacks);
+pub struct KnownPacksC2s(pub KnownPacks);
 
 #[derive(Debug, Encode, Decode)]
 pub struct KnownPacks {
-    known_packs: Vec<KnownPack>,
+    pub known_packs: Vec<KnownPack>,
 }
 
 #[derive(Debug, Encode, Decode)]
 pub struct KnownPack {
-    namespace: Box<VarStringCap32767>,
-    id: Box<VarStringCap32767>,
-    version: Box<VarStringCap32767>,
+    pub namespace: VarStringCap32767,
+    pub id: VarStringCap32767,
+    pub version: VarStringCap32767,
 }

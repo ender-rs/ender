@@ -3,7 +3,14 @@ use std::{
     net::SocketAddr,
 };
 
-use common::net::mc1_21_1::packet::{game_profile::GameProfile, login::LoginSuccessS2c};
+use common::net::{
+    mc1_21_1::packet::{
+        game_profile::GameProfile,
+        known_packs::{KnownPack, KnownPacks, KnownPacksS2c},
+        login::LoginSuccessS2c,
+    },
+    protocol_version::ProtocolVersion,
+};
 use httparse::{Response, EMPTY_HEADER};
 use mio::{event::Event, net::TcpStream, Interest, Token};
 use nonmax::NonMaxUsize;
@@ -162,7 +169,8 @@ impl LoginServer {
                     }
                     .into(),
                 )?;
-                connection.state.flush_write_buffer()?;
+                                connection.state.flush_write_buffer()?;
+
                 self.transfer_player_to_game_server(connection_id);
             }
         };

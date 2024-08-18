@@ -7,7 +7,6 @@ use crate::{
 use aes::cipher::KeyIvInit;
 use cfb8::{Decryptor, Encryptor};
 use fastbuf::{Buf, Buffer, ReadBuf, ReadToBuf, WriteBuf};
-use mio::Registry;
 use nonmax::NonMaxI32;
 use packetize::{ClientBoundPacketStream, ServerBoundPacketStream};
 

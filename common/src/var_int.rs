@@ -1,3 +1,4 @@
+use derive_more::derive::{Deref, DerefMut, Display, From, Into};
 use fastbuf::{ReadBuf, WriteBuf};
 use nonmax::NonMaxI32;
 use packetize::{Decode, Encode};
@@ -6,11 +7,11 @@ use serde::{Deserialize, Serialize};
 #[derive(
     Default,
     Debug,
-    derive_more::Display,
-    derive_more::From,
-    derive_more::Into,
-    derive_more::Deref,
-    derive_more::DerefMut,
+    Display,
+    From,
+    Into,
+    Deref,
+    DerefMut,
     Clone,
     Copy,
     PartialEq,
@@ -25,11 +26,11 @@ pub struct VarInt(i32);
 #[derive(
     Default,
     Debug,
-    derive_more::Display,
-    derive_more::From,
-    derive_more::Into,
-    derive_more::Deref,
-    derive_more::DerefMut,
+    Display,
+    From,
+    Into,
+    Deref,
+    DerefMut,
     Clone,
     Copy,
     PartialEq,

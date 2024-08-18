@@ -14,6 +14,7 @@ pub fn handle_login_server_s_packet(
     connection_id: ConnectionId,
 ) -> Result<(), ()> {
     let connection = &mut server.get_connection_mut(connection_id).state;
+    println!("HI");
     match connection
         .state
         .decode_server_bound_packet(&mut connection.read_buf, &mut connection.stream_state)?
@@ -34,7 +35,10 @@ pub fn handle_login_server_s_packet(
             handle_encryption_response(server, connection_id, &encryption_response)
         }
         _ => Err(()),
-    }
+    }.inspect(|value| {
+        println!("hi2");
+    })
+
 }
 
 pub fn handle_game_server_s_packet(
