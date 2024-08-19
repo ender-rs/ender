@@ -10,7 +10,6 @@ use common::{
                 handshake::{HandShakeC2s, NextState},
                 known_packs::{KnownPack, KnownPacks, KnownPacksC2s},
                 login::{LoginAckC2s, LoginStartC2s},
-                registry_data::Nbt,
             },
             packets::{ClientBoundPacket, Mc1_21_1ConnectionState},
         },
@@ -21,7 +20,6 @@ use common::{
 use fastbuf::ReadBuf;
 use mio::net::TcpStream;
 use packetize::ClientBoundPacketStream;
-use simd_json::{owned::Object, prelude::ObjectTrait};
 use uuid::Uuid;
 
 #[derive(Debug)]
@@ -162,7 +160,6 @@ fn read(
                 println!("{known_packs:?}");
             }
             ClientBoundPacket::RegistryDataS2c(registry_data) => {
-                println!("registry_data!!");
                 output_file
                     .write_all(
                         simd_json::to_string_pretty(&registry_data.to_json())

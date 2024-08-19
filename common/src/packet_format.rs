@@ -74,7 +74,6 @@ impl PacketStreamFormat for MinecraftPacketFormat {
                     temp_buf.try_write(buf.read(buf.remaining()))?;
                     buf.clear();
                     buf.try_write(temp_buf.read(temp_buf.remaining()))?;
-                    println!("decompression successfully done");
                 }
             } else {
                 let packet_len = *VarInt::decode(buf)?;
