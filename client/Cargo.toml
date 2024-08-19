@@ -3,6 +3,10 @@ name = "client"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "registry_extractor"
+path = "registry_extractor.rs"
+
 [dependencies]
 common = { path = "../common" }
 aes = { version = "0.8.4", features = ["hazmat"] }

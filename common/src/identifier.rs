@@ -1,3 +1,4 @@
+use derive_more::derive::Display;
 use packetize::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 
@@ -14,6 +15,7 @@ use crate::array_capacitor::VarStringCap;
     derive_more::From,
     Encode,
     Decode,
+    Display,
 )]
 pub struct Identifier(VarStringCap<32767>);
 

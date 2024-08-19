@@ -23,7 +23,6 @@ pub struct Connection {
     pub state: Mc1_21_1ConnectionState,
     pub stream_state: MinecraftPacketFormat,
     pub stream: mio::net::TcpStream,
-    pub encrypt_key: Option<Vec<u8>>,
     pub e_cipher: Option<Encryptor<aes::Aes128>>,
     pub d_cipher: Option<Decryptor<aes::Aes128>>,
 }
@@ -37,7 +36,6 @@ impl Connection {
             write_buf: Box::new(Buffer::new()),
             e_cipher: None,
             d_cipher: None,
-            encrypt_key: None,
             stream_state: MinecraftPacketFormat::new(),
         }
     }
@@ -123,7 +121,6 @@ impl Connection {
             Some(Encryptor::<aes::Aes128>::new_from_slices(&crypt_key, &crypt_key).unwrap());
         self.d_cipher =
             Some(Decryptor::<aes::Aes128>::new_from_slices(&crypt_key, &crypt_key).unwrap());
-        self.encrypt_key = Some(crypt_key.to_vec());
         Ok(())
     }
 }

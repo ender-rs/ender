@@ -1,8 +1,6 @@
 use std::{mem::MaybeUninit, time::Duration};
 
-use common::{
-    net::mc1_21_1::packet::game_profile::GameProfile, packet_format::PACKET_BYTE_BUFFER_LENGTH,
-};
+use common::{net::game_profile::GameProfile, packet_format::PACKET_BYTE_BUFFER_LENGTH};
 use derive_more::derive::{Deref, DerefMut};
 use fastbuf::{Buf, ReadBuf};
 use kanal::Receiver;

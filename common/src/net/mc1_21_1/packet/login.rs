@@ -1,9 +1,8 @@
 use packetize::{Decode, Encode};
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::player_name::PlayerName;
-
-use super::game_profile::Property;
+use crate::{array_capacitor::VarStringCap32767, player_name::PlayerName};
 
 #[derive(Debug, Encode, Decode)]
 pub struct LoginStartC2s {
@@ -21,3 +20,10 @@ pub struct LoginSuccessS2c {
 
 #[derive(Debug, Encode, Decode)]
 pub struct LoginAckC2s;
+
+#[derive(Serialize, Deserialize, Debug, Encode, Decode, Clone)]
+pub struct Property {
+    pub name: VarStringCap32767,
+    pub value: VarStringCap32767,
+    pub signature: Option<VarStringCap32767>,
+}

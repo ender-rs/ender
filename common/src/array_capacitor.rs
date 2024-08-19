@@ -1,12 +1,12 @@
 use std::str::FromStr;
 
-use derive_more::derive::{Deref, DerefMut, From, Into};
+use derive_more::derive::{Deref, DerefMut, Display, From, Into};
 use fastbuf::{ReadBuf, WriteBuf};
 use fastvarint::VarInt;
 use packetize::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, DerefMut, Deref, Serialize, Deserialize, Clone, Into, From)]
+#[derive(Display, Debug, DerefMut, Deref, Serialize, Deserialize, Clone, Into, From)]
 pub struct VarStringCap<const CAP: usize>(pub String);
 
 #[derive(Debug, DerefMut, Deref, Serialize, Deserialize, Clone, Into, From, Encode, Decode)]

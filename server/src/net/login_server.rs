@@ -1,8 +1,6 @@
 use std::{mem::MaybeUninit, time::Duration};
 
-use common::{
-    net::mc1_21_1::packet::game_profile::GameProfile, packet_format::PACKET_BYTE_BUFFER_LENGTH,
-};
+use common::{net::game_profile::GameProfile, packet_format::PACKET_BYTE_BUFFER_LENGTH};
 use derive_more::derive::{Deref, DerefMut};
 use fastbuf::{Buf, ReadBuf};
 use kanal::Sender;
@@ -27,11 +25,8 @@ pub struct LoginServer {
     pub game_player_sender: Sender<(Connection, GameProfile)>,
 }
 
-#[derive(Deref, DerefMut)]
 pub struct LoginConnection {
-    #[deref]
-    #[deref_mut]
-    game_profile: GameProfile,
+    pub game_profile: GameProfile,
     pub verify_token: MaybeUninit<[u8; 4]>,
     pub attached_http_client_id: Option<NonMaxUsize>,
     pub state: Connection,

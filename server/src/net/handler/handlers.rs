@@ -89,7 +89,7 @@ pub fn handle_encryption_response(
         .finalize();
     let hash = BigInt::from_signed_bytes_be(&hash).to_str_radix(16);
     let connection = server.get_connection_mut(connection_id);
-    let player_name = connection.name.to_string();
+    let player_name = connection.game_profile.name.to_string();
 
     // Check if player are not banned
     // Unpack textures
@@ -214,8 +214,8 @@ pub fn handle_login_start(
 
     dbg!("Success send encrypt request");
     let connection = server.get_connection_mut(connection_id);
-    connection.id = login_start.uuid;
-    connection.name = login_start.name.clone();
+    connection.game_profile.id = login_start.uuid;
+    connection.game_profile.name = login_start.name.clone();
     Ok(())
 }
 

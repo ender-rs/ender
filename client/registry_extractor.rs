@@ -1,4 +1,4 @@
-use std::{mem::MaybeUninit, net::SocketAddr, str::FromStr};
+use std::{fs::File, io::Write, mem::MaybeUninit, net::SocketAddr, str::FromStr};
 
 use arrayvec::ArrayString;
 use common::{
@@ -10,6 +10,7 @@ use common::{
                 handshake::{HandShakeC2s, NextState},
                 known_packs::{KnownPack, KnownPacks, KnownPacksC2s},
                 login::{LoginAckC2s, LoginStartC2s},
+                registry_data::Nbt,
             },
             packets::{ClientBoundPacket, Mc1_21_1ConnectionState},
         },
@@ -20,6 +21,7 @@ use common::{
 use fastbuf::ReadBuf;
 use mio::net::TcpStream;
 use packetize::ClientBoundPacketStream;
+use simd_json::{owned::Object, prelude::ObjectTrait};
 use uuid::Uuid;
 
 #[derive(Debug)]
@@ -36,6 +38,7 @@ pub enum Error {
 fn main() -> Result<(), Error> {
     let args: Vec<String> = std::env::args().collect();
     let addr_string = &args[1];
+    let output_file = &args[2];
     let addr: SocketAddr = addr_string
         .parse()
         .map_err(|_| Error::AddressParsingError)?;
@@ -69,19 +72,27 @@ fn main() -> Result<(), Error> {
     #[allow(invalid_value)]
     let ref mut temp_buf =
         unsafe { MaybeUninit::<[u8; PACKET_BYTE_BUFFER_LENGTH]>::uninit().assume_init() };
+    let mut file = File::create(output_file).unwrap();
     loop {
-        match read(&mut connection, temp_buf) {
-            Ok(_) => {}
+        match read(&mut connection, temp_buf, &mut file) {
+            Ok(ReadResult::Done) => return Ok(()),
+            Ok(ReadResult::NotDone) => {}
             Err(Error::DecodePacketError) => {}
             Err(err) => Err(err)?,
         };
     }
 }
 
+pub enum ReadResult {
+    Done,
+    NotDone,
+}
+
 fn read(
     connection: &mut Connection,
     temp_buf: &mut [u8; PACKET_BYTE_BUFFER_LENGTH],
-) -> Result<(), Error> {
+    output_file: &mut File,
+) -> Result<ReadResult, Error> {
     connection
         .read_to_buf_from_stream(temp_buf)
         .map_err(|_| Error::ReadToBufFromStreamError)?;
@@ -152,13 +163,20 @@ fn read(
             }
             ClientBoundPacket::RegistryDataS2c(registry_data) => {
                 println!("registry_data!!");
-                println!("{registry_data:?}");
+                output_file
+                    .write_all(
+                        simd_json::to_string_pretty(&registry_data.to_json())
+                            .unwrap()
+                            .as_bytes(),
+                    )
+                    .unwrap();
             }
             ClientBoundPacket::PluginMessagePlayS2c(_) => todo!(),
             ClientBoundPacket::UpdateTagsS2c(update_tags) => {
-                println!("{update_tags:?}");
+                return Ok(ReadResult::Done);
+                // println!("{update_tags:?}");
             }
         }
     }
-    Ok(())
+    Ok(ReadResult::NotDone)
 }

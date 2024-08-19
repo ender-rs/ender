@@ -3,7 +3,7 @@ use std::{
     net::SocketAddr,
 };
 
-use common::net::mc1_21_1::packet::{game_profile::GameProfile, login::LoginSuccessS2c};
+use common::net::{game_profile::GameProfile, mc1_21_1::packet::login::LoginSuccessS2c};
 use httparse::{Response, EMPTY_HEADER};
 use mio::{event::Event, net::TcpStream, Interest, Token};
 use nonmax::NonMaxUsize;
@@ -147,8 +147,8 @@ impl LoginServer {
             } => {
                 let connection =
                     unsafe { self.connections.get_unchecked_mut(client.connection_id) };
-                let uuid = connection.id;
-                let player_name = connection.name.clone();
+                let uuid = connection.game_profile.id;
+                let player_name = connection.game_profile.name.clone();
                 println!("LoginSuccess");
 
                 let game_profile: GameProfile =

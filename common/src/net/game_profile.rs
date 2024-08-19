@@ -1,18 +1,12 @@
 use std::str::FromStr;
 
 use arrayvec::ArrayString;
-use packetize::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{array_capacitor::VarStringCap32767, player_name::PlayerName};
+use crate::player_name::PlayerName;
 
-#[derive(Serialize, Deserialize, Debug, Encode, Decode, Clone)]
-pub struct Property {
-    pub name: VarStringCap32767,
-    pub value: VarStringCap32767,
-    pub signature: Option<VarStringCap32767>,
-}
+use super::mc1_21_1::packet::login::Property;
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub enum ProfileAction {

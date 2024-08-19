@@ -10,6 +10,7 @@ resolver = "2"
 [dependencies]
 fastnbt = "2.5.0"
 server = { path = "./server" }
+simdnbt.workspace = true
 
 [dev-dependencies]
 divan = "0.1.14"
