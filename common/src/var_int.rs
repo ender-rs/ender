@@ -21,7 +21,7 @@ use serde::{Deserialize, Serialize};
     Serialize,
     Deserialize,
 )]
-pub struct VarInt(i32);
+pub struct VarInt(pub i32);
 
 #[derive(
     Default,

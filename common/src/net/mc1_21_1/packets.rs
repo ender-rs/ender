@@ -1,21 +1,18 @@
 use packetize::streaming_packets;
 
 use super::packet::{
-    client_info::ClientInformationC2s,
-    disconnect::LoginDisconnectS2c,
-    encryption::{EncryptionRequestS2c, EncryptionResponseC2s},
-    feature_flags::FeatureFlagsS2c,
-    finish_configuration::{FinishConfigurationAckC2s, FinishConfigurationS2c},
-    handshake::HandShakeC2s,
-    known_packs::{KnownPacksC2s, KnownPacksS2c},
-    login::{LoginAckC2s, LoginStartC2s, LoginSuccessS2c},
-    plugin_message::{
-        PluginMessageConfC2s, PluginMessageConfS2c, PluginMessagePlayC2s, PluginMessagePlayS2c,
+    conf::{
+        ClientInformationC2s, FeatureFlagsS2c, FinishConfigurationAckC2s, FinishConfigurationS2c,
+        KnownPacksC2s, KnownPacksS2c, PluginMessageConfC2s, PluginMessageConfS2c,
+        PluginMessagePlayC2s, PluginMessagePlayS2c, RegistryDataS2c, UpdateTagsS2c,
     },
-    registry_data::RegistryDataS2c,
-    set_compression::SetCompressionS2c,
+    handshake::HandShakeC2s,
+    login::{
+        EncryptionRequestS2c, EncryptionResponseC2s, LoginAckC2s, LoginStartC2s, LoginSuccessS2c,
+        SetCompressionS2c,
+    },
+    play::LoginDisconnectS2c,
     status::{PingRequestC2s, PingResponseS2c, StatusRequestC2s, StatusResponseS2c},
-    update_tags::UpdateTagsS2c,
 };
 
 #[streaming_packets]

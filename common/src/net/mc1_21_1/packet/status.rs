@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
-    array_capacitor::VarStringCap, net::protocol_version::ProtocolVersion, player_name::PlayerName,
+    net::protocol_version::ProtocolVersion, player_name::PlayerName, var_array::VarStringCap,
 };
 
 #[derive(Debug, Encode, Decode)]

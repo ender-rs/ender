@@ -1,7 +1,6 @@
 use std::{mem::MaybeUninit, time::Duration};
 
 use common::{net::game_profile::GameProfile, packet_format::PACKET_BYTE_BUFFER_LENGTH};
-use derive_more::derive::{Deref, DerefMut};
 use fastbuf::{Buf, ReadBuf};
 use kanal::Sender;
 use mio::{event::Event, net::TcpListener, Interest, Poll};
@@ -35,7 +34,6 @@ pub struct LoginConnection {
 impl LoginServer {
     const LISTENER_KEY: usize = usize::MAX;
     pub const CONNECTIONS_CAPACITY: usize = 1000;
-    const HTTP_REQUESTS_CAPACITY: usize = 30;
     const PORT: u16 = 25565;
 
     pub fn new(game_player_sender: Sender<(Connection, GameProfile)>) -> Self {

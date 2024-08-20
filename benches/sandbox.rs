@@ -17,6 +17,7 @@ fn main() {
     divan::main()
 }
 
+#[ignore]
 #[divan::bench(args = [get_source_bytes()])]
 fn benchmark_copy_from_slice_10_000_bytes(src: &Src) {
     #[allow(invalid_value)]

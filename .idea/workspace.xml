@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="ALL" />
+  </component>
+  <component name="CargoProjects">
+    <cargoProject FILE="$PROJECT_DIR$/Cargo.toml" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="7b7cb0ae-47b1-4399-a2e4-d4322318e82c" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Cargo.lock" beforeDir="false" afterPath="$PROJECT_DIR$/Cargo.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Cargo.toml" beforeDir="false" afterPath="$PROJECT_DIR$/Cargo.toml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/benches/sandbox.rs" beforeDir="false" afterPath="$PROJECT_DIR$/benches/sandbox.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/registry_extractor.rs" beforeDir="false" afterPath="$PROJECT_DIR$/client/registry_extractor.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/common/src/array_capacitor.rs" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/common/src/identifier.rs" beforeDir="false" afterPath="$PROJECT_DIR$/common/src/identifier.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/common/src/lib.rs" beforeDir="false" afterPath="$PROJECT_DIR$/common/src/lib.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/common/src/net/mc1_21_1/packet/client_info.rs" beforeDir="false" afterPath="$PROJECT_DIR$/common/src/net/mc1_21_1/packet/client_info.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/common/src/net/mc1_21_1/packet/disconnect.rs" beforeDir="false" afterPath="$PROJECT_DIR$/common/src/net/mc1_21_1/packet/disconnect.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/common/src/net/mc1_21_1/packet/encryption.rs" beforeDir="false" afterPath="$PROJECT_DIR$/common/src/net/mc1_21_1/packet/encryption.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/common/src/net/mc1_21_1/packet/feature_flags.rs" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/common/src/net/mc1_21_1/packet/finish_configuration.rs" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/common/src/net/mc1_21_1/packet/known_packs.rs" beforeDir="false" afterPath="$PROJECT_DIR$/common/src/net/mc1_21_1/packet/known_packs.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/common/src/net/mc1_21_1/packet/login.rs" beforeDir="false" afterPath="$PROJECT_DIR$/common/src/net/mc1_21_1/packet/login.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/common/src/net/mc1_21_1/packet/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/common/src/net/mc1_21_1/packet/mod.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/common/src/net/mc1_21_1/packet/plugin_message.rs" beforeDir="false" afterPath="$PROJECT_DIR$/common/src/net/mc1_21_1/packet/plugin_message.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/common/src/net/mc1_21_1/packet/registry_data.rs" beforeDir="false" afterPath="$PROJECT_DIR$/common/src/net/mc1_21_1/packet/registry_data.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/common/src/net/mc1_21_1/packet/status.rs" beforeDir="false" afterPath="$PROJECT_DIR$/common/src/net/mc1_21_1/packet/status.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/common/src/net/mc1_21_1/packets.rs" beforeDir="false" afterPath="$PROJECT_DIR$/common/src/net/mc1_21_1/packets.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/common/src/packet_format.rs" beforeDir="false" afterPath="$PROJECT_DIR$/common/src/packet_format.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/src/net/handler/handlers.rs" beforeDir="false" afterPath="$PROJECT_DIR$/server/src/net/handler/handlers.rs" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="MacroExpansionManager">
+    <option name="directoryName" value="w6cl7ffq" />
+  </component>
+  <component name="ProjectColorInfo"><![CDATA[{
+  "customColor": "",
+  "associatedIndex": 3
+}]]></component>
+  <component name="ProjectId" id="2kuJYG9Seq9OY8gq3O4Au28kt6Y" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "git-widget-placeholder": "main",
+    "nodejs_package_manager_path": "npm",
+    "org.rust.cargo.project.model.PROJECT_DISCOVERY": "true",
+    "org.rust.first.attach.projects": "true"
+  }
+}]]></component>
+  <component name="RustProjectSettings">
+    <option name="toolchainHomeDirectory" value="$USER_HOME$/.cargo/bin" />
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="7b7cb0ae-47b1-4399-a2e4-d4322318e82c" name="Changes" comment="" />
+      <created>1724127574074</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1724127574074</updated>
+      <workItem from="1724127576363" duration="2000" />
+    </task>
+    <servers />
+  </component>
+</project>

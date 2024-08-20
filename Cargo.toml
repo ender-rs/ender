@@ -4,12 +4,14 @@ version = "0.1.0"
 edition = "2021"
 
 [workspace]
-members = ["server", "client", "common"]
+members = ["server", "common"]
 resolver = "2"
 
 [dependencies]
 fastnbt = "2.5.0"
 server = { path = "./server" }
+common = { path = "./common" }
+arrayvec = { version = "0.7.4", features = ["serde"] }
 simdnbt.workspace = true
 
 [dev-dependencies]
@@ -29,3 +31,9 @@ harness = false
 strip = true
 lto = true
 codegen-units = 1
+
+[[bin]]
+name = "registry_extractor"
+path = "registry_extractor.rs"
+
+

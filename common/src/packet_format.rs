@@ -1,7 +1,4 @@
-use std::{
-    io::{Cursor, Read},
-    mem::{transmute_copy, MaybeUninit},
-};
+use std::mem::{transmute_copy, MaybeUninit};
 
 use fastbuf::{Buf, Buffer, ReadBuf, WriteBuf};
 use nonmax::{NonMaxI32, NonMaxU32};

@@ -2,21 +2,17 @@ use std::{mem::MaybeUninit, str::FromStr};
 
 use arrayvec::{ArrayString, ArrayVec};
 use common::{
-    array_capacitor::VarStringCap,
     net::{
         connection::ConnectionId,
         mc1_21_1::{
             packet::{
-                client_info::ClientInformationC2s,
-                disconnect::Disconnect,
-                encryption::{EncryptionRequestS2c, EncryptionResponseC2s},
-                feature_flags::FeatureFlagsS2c,
-                finish_configuration::FinishConfigurationAckC2s,
+                conf::{
+                    ClientInformationC2s, FeatureFlagsS2c, FinishConfigurationAckC2s, KnownPack,
+                    KnownPacks, KnownPacksS2c, PluginMessage,
+                },
                 handshake::{HandShakeC2s, NextState},
-                known_packs::{KnownPack, KnownPacks, KnownPacksS2c},
-                login::{LoginAckC2s, LoginStartC2s},
-                plugin_message::PluginMessage,
-                set_compression::SetCompressionS2c,
+                login::{EncryptionRequestS2c, EncryptionResponseC2s, LoginAckC2s, LoginStartC2s},
+                play::Disconnect,
                 status::{
                     Description, PingRequestC2s, PingResponseS2c, Players, Sample, Status,
                     StatusRequestC2s, StatusResponseS2c, Version,
@@ -26,6 +22,7 @@ use common::{
         },
         protocol_version::ProtocolVersion,
     },
+    var_array::VarStringCap,
 };
 use num_bigint::BigInt;
 use rsa::Pkcs1v15Encrypt;
@@ -151,14 +148,13 @@ pub fn handle_login_ack(
         .into(),
     )?;
     connection.send_packet_to_client(
-        &KnownPacksS2c(KnownPacks {
+        &<common::net::mc1_21_1::packets::ClientBoundPacket>::from(KnownPacksS2c(KnownPacks {
             known_packs: vec![KnownPack {
                 namespace: "minecraft".into(),
                 id: "core".into(),
                 version: ProtocolVersion::Mc1_21_1.to_string().into(),
             }],
-        })
-        .into(),
+        })),
     )?;
 
     connection.flush_write_buffer()?;

@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use derive_more::derive::{Deref, DerefMut};
 use packetize::{Decode, Encode};
 
-use crate::{array_capacitor::VecCap, identifier::Identifier};
+use crate::{identifier::Identifier, var_array::VecCap};
 
 #[derive(Debug)]
 pub struct PluginMessage {

@@ -1,10 +1,6 @@
-use std::{
-    fmt::{Debug, Display},
-    io::Cursor,
-    os::fd::OwnedFd,
-};
+use std::{fmt::Debug, io::Cursor};
 
-use derive_more::derive::{Deref, DerefMut, Display};
+use derive_more::derive::{Deref, DerefMut};
 use fastbuf::{ReadBuf, WriteBuf};
 use packetize::{Decode, Encode};
 use simd_json::{owned::Object, OwnedValue, StaticNode};

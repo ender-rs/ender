@@ -1,7 +1,7 @@
 use bitflags::bitflags;
 use packetize::{Decode, Encode};
 
-use crate::array_capacitor::VarStringCap;
+use crate::var_array::VarStringCap;
 
 #[derive(Debug, Encode, Decode)]
 pub struct ClientInformationC2s {

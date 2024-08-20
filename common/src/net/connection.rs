@@ -1,4 +1,4 @@
-use std::{io::Read, iter::Inspect, mem::MaybeUninit, time::Instant};
+use std::io::Read;
 
 use crate::{
     net::mc1_21_1::packets::{ClientBoundPacket, Mc1_21_1ConnectionState},
@@ -12,7 +12,7 @@ use packetize::{ClientBoundPacketStream, ServerBoundPacketStream};
 
 use super::{
     cryptic,
-    mc1_21_1::{packet::set_compression::SetCompressionS2c, packets::ServerBoundPacket},
+    mc1_21_1::{packet::login::SetCompressionS2c, packets::ServerBoundPacket},
 };
 
 pub type ConnectionId = usize;

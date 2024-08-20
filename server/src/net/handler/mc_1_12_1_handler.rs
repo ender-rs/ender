@@ -35,10 +35,10 @@ pub fn handle_login_server_s_packet(
             handle_encryption_response(server, connection_id, &encryption_response)
         }
         _ => Err(()),
-    }.inspect(|value| {
+    }
+    .inspect(|value| {
         println!("hi2");
     })
-
 }
 
 pub fn handle_game_server_s_packet(

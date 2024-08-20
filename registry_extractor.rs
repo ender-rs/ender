@@ -10,6 +10,7 @@ use common::{
                 handshake::{HandShakeC2s, NextState},
                 known_packs::{KnownPack, KnownPacks, KnownPacksC2s},
                 login::{LoginAckC2s, LoginStartC2s},
+                registry_data::RegistryData,
             },
             packets::{ClientBoundPacket, Mc1_21_1ConnectionState},
         },
@@ -160,16 +161,19 @@ fn read(
                 println!("{known_packs:?}");
             }
             ClientBoundPacket::RegistryDataS2c(registry_data) => {
+                match registry_data.registry_data {
+                    RegistryData::DimensionType(dim_type) => {}
+                }
                 output_file
                     .write_all(
-                        simd_json::to_string_pretty(&registry_data.to_json())
+                        simd_json::to_string_pretty(&registry_data.registry_data)
                             .unwrap()
                             .as_bytes(),
                     )
                     .unwrap();
             }
             ClientBoundPacket::PluginMessagePlayS2c(_) => todo!(),
-            ClientBoundPacket::UpdateTagsS2c(update_tags) => {
+            ClientBoundPacket::UpdateTagsS2c(_update_tags) => {
                 return Ok(ReadResult::Done);
                 // println!("{update_tags:?}");
             }

@@ -1,5 +1,6 @@
 use std::str::FromStr;
 
+use arrayvec::ArrayString;
 use derive_more::derive::{Deref, DerefMut, Display, From, Into};
 use fastbuf::{ReadBuf, WriteBuf};
 use fastvarint::VarInt;
@@ -8,6 +9,9 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Display, Debug, DerefMut, Deref, Serialize, Deserialize, Clone, Into, From)]
 pub struct VarStringCap<const CAP: usize>(pub String);
+
+#[derive(Display, Debug, DerefMut, Deref, Serialize, Deserialize, Clone, Into, From)]
+pub struct VarArrayStringCap<const CAP: usize>(ArrayString<CAP>);
 
 #[derive(Debug, DerefMut, Deref, Serialize, Deserialize, Clone, Into, From, Encode, Decode)]
 pub struct VarStringCap32767(pub VarStringCap<32767>);
@@ -102,11 +106,24 @@ impl<const CAP: usize> Decode for VarStringCap<CAP> {
     }
 }
 
-impl<const CAP: usize> Encode for VarStringCap<CAP> {
-    fn encode(&self, buf: &mut impl WriteBuf) -> Result<(), ()> {
-        (self.len() as u32).encode_var(buf)?;
-        buf.write(self.as_bytes());
-        Ok(())
+impl<const CAP: usize> Decode for VarArrayStringCap<CAP> {
+    fn decode(buf: &mut impl ReadBuf) -> Result<Self, ()> {
+        let (string_len, read_len) = u32::decode_var_from_buf(buf)?;
+        buf.advance(read_len);
+        let string_len = string_len as usize;
+        if buf.remaining() < string_len {
+            Err(())?
+        }
+        if CAP < string_len {
+            #[cfg(debug_assertions)]
+            dbg!(CAP < string_len, CAP, string_len);
+            Err(())?
+        }
+        let mut vec = Vec::with_capacity(string_len);
+        unsafe { vec.set_len(string_len) };
+        vec.as_mut_slice().copy_from_slice(buf.read(string_len));
+        let s = unsafe { std::str::from_utf8_unchecked(vec.as_slice()) };
+        Ok(VarArrayStringCap(ArrayString::from(s).unwrap()))
     }
 }
 
@@ -116,9 +133,25 @@ impl<const CAP: usize> From<&[u8]> for VecCap<u8, CAP> {
     }
 }
 
+impl<const CAP: usize> Encode for VarStringCap<CAP> {
+    fn encode(&self, buf: &mut impl WriteBuf) -> Result<(), ()> {
+        (self.len() as u32).encode_var(buf)?;
+        buf.write(self.as_bytes());
+        Ok(())
+    }
+}
+
 impl<const CAP: usize> From<&'static str> for VarStringCap<CAP> {
     fn from(value: &'static str) -> Self {
         VarStringCap(String::from_str(value).unwrap())
+    }
+}
+
+impl<const CAP: usize> Encode for VarArrayStringCap<CAP> {
+    fn encode(&self, buf: &mut impl WriteBuf) -> Result<(), ()> {
+        (self.len() as u32).encode_var(buf)?;
+        buf.write(self.as_bytes());
+        Ok(())
     }
 }
 

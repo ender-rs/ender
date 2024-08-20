@@ -2,7 +2,7 @@ use derive_more::derive::Display;
 use packetize::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 
-use crate::array_capacitor::VarStringCap;
+use crate::var_array::VarStringCap;
 
 #[derive(
     Debug,

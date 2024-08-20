@@ -1,8 +1,9 @@
+#![feature(adt_const_params)]
 #![feature(min_specialization)]
 #![allow(incomplete_features)]
 #![feature(specialization)]
 
-pub mod array_capacitor;
+pub mod var_array;
 pub mod identifier;
 pub mod net;
 pub mod packet_format;
